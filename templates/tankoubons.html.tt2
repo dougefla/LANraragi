@@ -11,6 +11,7 @@
     <link rel="stylesheet" type="text/css" href="[% c.url_for('/css/vendor/fontawesome-all.min.css') %]" />
     <link rel="stylesheet" type="text/css" href="[% c.url_for('/css/vendor/ReactToastify.min.css') %]" />
     <link rel="stylesheet" type="text/css" href="[% c.url_for('/css/vendor/sweetalert2.min.css') %]" />
+    <link rel="stylesheet" type="text/css" href="[% c.url_for('/css/vendor/jquery.contextMenu.min.css') %]" />
 
     <style>
         .empty-message {
@@ -324,6 +325,8 @@
     [% csshead %]
 
     <script src="[% c.url_for('/js/vendor/jquery.min.js') %]" type="text/JAVASCRIPT"></script>
+    <script src="[% c.url_for('/js/vendor/jquery.ui.position.min.js') %]" type="text/JAVASCRIPT"></script>
+    <script src="[% c.url_for('/js/vendor/jquery.contextMenu.min.js') %]" type="text/JAVASCRIPT"></script>
     <script src="[% c.url_for('/js/vendor/preact.umd.js') %]" type="text/JAVASCRIPT"></script>
     <script src="[% c.url_for('/js/vendor/hooks.umd.js') %]" type="text/JAVASCRIPT"></script>
     <script src="[% c.url_for('/js/vendor/compat.umd.js') %]" type="text/JAVASCRIPT"></script>
