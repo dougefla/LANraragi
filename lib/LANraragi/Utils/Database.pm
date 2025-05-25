@@ -282,10 +282,14 @@ sub build_tank_json($id) {
     chop $aggregate_tags;
     chop $aggregate_names;
 
+    # Ensure the tank name is properly decoded from Redis encoding
+    my $tank_name = redis_decode($tank{name});
+
     my $arcdata = {
         arcid        => $id,
-        title        => $tank{name},
-        filename     => "",
+        title       => $tank_name,
+        name        => $tank_name,  # Add name field as well for consistency
+        filename    => $tank_name,  # Use tank name as filename for display
         tags         => $aggregate_tags,
         summary      => "Tankoubon containing: $aggregate_names",
         isnew        => $aggregate_isnew ? $aggregate_isnew : "false",
@@ -293,7 +297,8 @@ sub build_tank_json($id) {
         progress     => $aggregate_progress,
         pagecount    => $aggregate_pagecount,
         lastreadtime => $latest_readtime,
-        size         => $aggregate_size
+        size         => $aggregate_size,
+        cover_archive => $tank{cover_archive}
     };
 
     return $arcdata;

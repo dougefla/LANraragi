@@ -73,13 +73,14 @@ IndexTable.initializeAll = function () {
         processing: true,
         ajax: {
             url: "search",
-            cache: true
-        },
-        fnServerParams: function(data) {
-            // Add custom parameter based on checkbox state
-            const groupTanks = $("#group-tanks").prop("checked");
-            data.push({name: "groupby_tanks", value: groupTanks ? "true" : "false"});
-            console.log("DataTables request data with custom params:", data);
+            cache: true,
+            data: function(d) {
+                // Add custom parameter based on checkbox state
+                const groupTanks = $("#group-tanks").prop("checked");
+                d.groupby_tanks = groupTanks ? "true" : "false";
+                console.log("DataTables request data with custom params:", d);
+                return d;
+            }
         },
         deferRender: true,
         lengthChange: false,
@@ -189,7 +190,7 @@ IndexTable.renderTitle = function (data, type) {
         const id = data.arcid || data.id;
         const isTankoubon = id.startsWith('TANK_');
         const title = isTankoubon ? data.name : data.title;
-        const url = isTankoubon ? `/tankoubon/${id.replace('TANK_', '')}` : `/reader?id=${id}`;
+        const url = isTankoubon ? `/tankoubon/${id}` : `/reader?id=${id}`;
 
         // For compact mode, the thumbnail API call enforces no_fallback=true in order to queue Minion jobs for missing thumbnails.
         // (Since compact mode is the "base", it's always loaded first even if you're in table mode)
@@ -204,7 +205,7 @@ IndexTable.renderTitle = function (data, type) {
                     new LRR.apiURL('/img/noThumb.png'))) 
             : new LRR.apiURL(`/api/archives/${id}/thumbnail?no_fallback=true`);
 
-        return `${progressDiv}${bookmarkIcon}<a class="context-menu" id="${id}" onmouseover="IndexTable.buildImageTooltip(this)" href="${new LRR.apiURL(url)}"> 
+        return `${progressDiv}${bookmarkIcon}<a class="context-menu" id="${id}" onmouseover="IndexTable.buildImageTooltip(this)" href="${url}"> 
                     ${LRR.encodeHTML(title)}
                 </a>
                 <div class="caption" style="display: none;">
