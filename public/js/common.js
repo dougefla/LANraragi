@@ -293,7 +293,7 @@ LRR.buildThumbnailDiv = function (data, tagTooltip = true) {
     // The ID can be in a different field depending on the archive/tankoubon object...
     const id = data.arcid || data.id;
     const isTankoubon = id.startsWith('TANK_');
-    let reader_url = new LRR.apiURL(`/${isTankoubon ? 'tankoubons' : 'reader'}?id=${id}`);
+    let reader_url = new LRR.apiURL(`/${isTankoubon ? 'tankoubon/' + id.replace('TANK_', '') : 'reader'}?id=${id}`);
     const bookmarkIcon = !isTankoubon ? LRR.buildBookmarkIconElement(id, "thumbnail-bookmark-icon") : '';
 
     // For tankoubons, we need to handle the title differently

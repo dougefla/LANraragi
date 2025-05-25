@@ -1,5 +1,5 @@
 /**
- * Tankoubon Management Operations
+ * Tankoubon Operations
  */
 window.Tankoubon = {
     /**
@@ -31,6 +31,30 @@ window.Tankoubon = {
         if (viewMode === 'grid') {
             $("#grid-view").click();
         }
+
+        // Initialize context menu
+        $.contextMenu({
+            selector: '.tankoubon-item',
+            callback: function(key, options) {
+                const tankId = $(this).data('tank-id');
+                switch(key) {
+                    case "view":
+                        window.location.href = `./tankoubon/${tankId}`;
+                        break;
+                    case "edit":
+                        Tankoubon.showEditTankoubonDialog(tankId);
+                        break;
+                    case "delete":
+                        Tankoubon.deleteTankoubon(tankId);
+                        break;
+                }
+            },
+            items: {
+                "view": {name: "View Details", icon: "fas fa-book"},
+                "edit": {name: "Edit Name", icon: "fas fa-edit"},
+                "delete": {name: "Delete", icon: "fas fa-trash"}
+            }
+        });
 
         // Load tankoubon list on page load
         this.loadTankoubonList();
@@ -85,7 +109,7 @@ window.Tankoubon = {
                         const archiveCount = tank.archives ? tank.archives.length : 0;
                         const lastModified = tank.last_modified ? new Date(tank.last_modified * 1000).toLocaleString() : "Never";
                         
-                        html += "<tr id='tank-" + tank.id + "' style='cursor: pointer;' onclick='Tankoubon.viewArchives(\"" + tank.id + "\")'>" +
+                        html += "<tr class='tankoubon-item' data-tank-id='" + tank.id + "' style='cursor: pointer;' onclick='window.location.href=\"./tankoubon/" + tank.id + "\"'>" +
                             "<td class='tank-name'>" + tank.name + "</td>" +
                             "<td>" + archiveCount + " archives</td>" +
                             "<td>" + lastModified + "</td>" +
@@ -109,7 +133,7 @@ window.Tankoubon = {
                             const archiveCount = tank.archives ? tank.archives.length : 0;
                             const lastModified = tank.last_modified ? new Date(tank.last_modified * 1000).toLocaleString() : "Never";
                             
-                            html += "<div class='tankoubon-card' onclick='Tankoubon.viewArchives(\"" + tank.id + "\")'>" +
+                            html += "<div class='tankoubon-item tankoubon-card' data-tank-id='" + tank.id + "' onclick='window.location.href=\"./tankoubon/" + tank.id + "\"'>" +
                                 "<div class='preview'>";
                             
                             if (tank.previewUrl) {

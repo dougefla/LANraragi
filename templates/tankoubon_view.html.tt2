@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+
+<head>
+    <title>[% title %] - [% tank.name %]</title>
+
+    <meta name="viewport" content="width=device-width" />
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+    <link type="image/png" rel="icon" href="[% c.url_for('/favicon.ico') %]" />
+    <link rel="stylesheet" type="text/css" href="[% c.url_for('/css/lrr.css?version=' _ version) %]" />
+    <link rel="stylesheet" type="text/css" href="[% c.url_for('/css/vendor/fontawesome-all.min.css') %]" />
+    <link rel="stylesheet" type="text/css" href="[% c.url_for('/css/vendor/ReactToastify.min.css') %]" />
+    <link rel="stylesheet" type="text/css" href="[% c.url_for('/css/vendor/sweetalert2.min.css') %]" />
+
+    <style>
+        .tankoubon-header {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #363940;
+            border-radius: 9px;
+        }
+
+        .tankoubon-cover {
+            width: 250px;
+            height: 350px;
+            overflow: hidden;
+            border-radius: 9px;
+            background: #2a2a2a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .tankoubon-cover img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .tankoubon-info {
+            flex: 1;
+        }
+
+        .tankoubon-title {
+            font-size: 24px;
+            margin-bottom: 15px;
+        }
+
+        .tankoubon-stats {
+            color: #999;
+            margin-bottom: 20px;
+        }
+
+        .tankoubon-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .view-modes {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding: 10px;
+            background: #2a2a2a;
+            border-radius: 5px;
+        }
+
+        .view-mode-btn {
+            padding: 8px 16px;
+            opacity: 0.6;
+        }
+
+        .view-mode-btn.active {
+            opacity: 1;
+            background-color: #4f535b;
+            color: white;
+        }
+
+        .archive-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            padding: 15px;
+        }
+
+        .archive-card {
+            background: #363940;
+            border-radius: 9px;
+            padding: 10px;
+            text-align: center;
+        }
+
+        .archive-card img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+
+        .archive-card .title {
+            font-size: 14px;
+            margin-bottom: 10px;
+            word-break: break-word;
+        }
+
+        .archive-list {
+            padding: 15px;
+        }
+
+        .archive-list-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 10px;
+            background: #363940;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+
+        .archive-list-item img {
+            width: 50px;
+            height: 70px;
+            object-fit: cover;
+            border-radius: 3px;
+        }
+
+        .archive-list-item .info {
+            flex: 1;
+        }
+
+        .archive-list-item .title {
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+
+        .archive-list-item .stats {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .continuous-view {
+            padding: 15px;
+        }
+
+        .continuous-view img {
+            max-width: 100%;
+            height: auto;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+
+        .progress-indicator {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+
+        .progress-new {
+            background: #28a745;
+            color: white;
+        }
+
+        .progress-reading {
+            background: #ffc107;
+            color: black;
+        }
+
+        .progress-completed {
+            background: #6c757d;
+            color: white;
+        }
+    </style>
+
+    [% csshead %]
+
+    <script src="[% c.url_for('/js/vendor/jquery.min.js') %]" type="text/JAVASCRIPT"></script>
+    <script src="[% c.url_for('/js/vendor/preact.umd.js') %]" type="text/JAVASCRIPT"></script>
+    <script src="[% c.url_for('/js/vendor/hooks.umd.js') %]" type="text/JAVASCRIPT"></script>
+    <script src="[% c.url_for('/js/vendor/compat.umd.js') %]" type="text/JAVASCRIPT"></script>
+    <script>window.React = window.preactCompat; window.react = window.preactCompat;</script>
+    <script src="[% c.url_for('/js/vendor/clsx.min.js') %]" type="text/JAVASCRIPT"></script>
+    <script src="[% c.url_for('/js/vendor/react-toastify.umd.js') %]" type="text/JAVASCRIPT"></script>
+    <script src="[% c.url_for('/js/vendor/sweetalert2.min.js') %]" type="text/JAVASCRIPT"></script>
+    
+    <script src="[% c.url_for('/js/i18n.js?version=' _ version) %]" type="text/JAVASCRIPT"></script>
+    <script src="[% c.url_for('/js/common.js?version=' _ version) %]" type="text/JAVASCRIPT"></script>
+    <script src="[% c.url_for('/js/server.js?version=' _ version) %]" type="text/JAVASCRIPT"></script>
+    <script src="[% c.url_for('/js/tankoubon_view.js?version=' _ version) %]" type="text/JAVASCRIPT"></script>
+</head>
+
+<body>
+
+    [% IF userlogged %]
+    <p id="nb">
+        <i class="fa fa-caret-right"></i>
+        <a href="[% c.url_for('/upload') %]">[% c.lh("Add Archives") %]</a>
+        <span style="margin-left:5px"></span>
+        <i class="fa fa-caret-right"></i>
+        <a href="[% c.url_for('/batch') %]">[% c.lh("Batch Operations") %]</a>
+        <span style="margin-left:5px"></span>
+        <i class="fa fa-caret-right"></i>
+        <a href="[% c.url_for('/config') %]">[% c.lh("Settings") %]</a>
+        <span style="margin-left:5px"></span>
+        <i class="fa fa-caret-right"></i>
+        <a href="[% c.url_for('/config/categories') %]">[% c.lh("Modify Categories") %]</a>
+        <span style="margin-left:5px"></span>
+        <i class="fa fa-caret-right"></i>
+        <a href="[% c.url_for('/category_grid') %]">[% c.lh("Category Grid") %]</a>
+        <span style="margin-left:5px"></span>
+        <i class="fa fa-caret-right"></i>
+        <a href="[% c.url_for('/tankoubons') %]">[% c.lh("Tankoubon") %]</a>
+        <span style="margin-left:5px"></span>
+        <i class="fa fa-caret-right"></i>
+        <a href="[% c.url_for('/stats') %]">[% c.lh("Statistics") %]</a>
+        <i class="fa fa-caret-right"></i>
+        <a href="[% c.url_for('/logs') %]">[% c.lh("Logs") %]</a>
+    </p>
+    [% ELSE %]
+    <p id="nb">
+        <i class="fa fa-caret-right"></i>
+        <a href="[% c.url_for('/login') %]">[% c.lh("Admin Login") %]</a>
+        <span style="margin-left:5px"></span>
+        <i class="fa fa-caret-right"></i>
+        <a href="[% c.url_for('/stats') %]">[% c.lh("Statistics") %]</a>
+    </p>
+    [% END %]
+
+    <div class='ido'>
+        <div class='tankoubon-header'>
+            <div class='tankoubon-cover'>
+                [% IF tank.cover_archive %]
+                <img src="[% c.url_for('/api/archives/' _ tank.cover_archive _ '/thumbnail') %]" alt="Cover" />
+                [% ELSE %]
+                <i class="fas fa-book fa-4x" style="color: #666;"></i>
+                [% END %]
+            </div>
+            <div class='tankoubon-info'>
+                <h2 class='tankoubon-title'>[% tank.name %]</h2>
+                <div class='tankoubon-stats'>
+                    <div>[% tank.archives.size %] Archives</div>
+                    [% IF tank.summary %]
+                    <div style="margin-top: 10px;">[% tank.summary %]</div>
+                    [% END %]
+                </div>
+                <div class='tankoubon-actions'>
+                    <button class='stdbtn edit-btn' onclick='TankoubonView.editTankoubon()'>
+                        <i class='fas fa-edit'></i> Edit
+                    </button>
+                    <button class='stdbtn' onclick='TankoubonView.manageArchives()'>
+                        <i class='fas fa-list'></i> Manage Archives
+                    </button>
+                    <button class='stdbtn' style='background: #dc3545; margin-left: auto;' onclick='TankoubonView.deleteTankoubon()'>
+                        <i class='fas fa-trash'></i> Delete
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class='view-modes'>
+            <button class='stdbtn view-mode-btn active' data-mode='grid'>
+                <i class='fas fa-th'></i> Grid View
+            </button>
+            <button class='stdbtn view-mode-btn' data-mode='list'>
+                <i class='fas fa-list'></i> List View
+            </button>
+            <button class='stdbtn view-mode-btn' data-mode='continuous'>
+                <i class='fas fa-scroll'></i> Continuous View
+            </button>
+        </div>
+
+        <div id='archives-container'>
+            <!-- Archives will be loaded here by JavaScript -->
+            <i class='fa fa-4x fa-compact-disc fa-spin' style='margin: 20px'></i>
+        </div>
+
+        <br><br>
+        <input id='return' class='stdbtn' type='button' value='[% c.lh("Return to Tankoubons") %]' onclick='window.location.href="[% c.url_for("/tankoubons") %]"' />
+    </div>
+
+    [% INCLUDE footer %]
+</body>
+
+</html> 

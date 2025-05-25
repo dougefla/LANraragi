@@ -189,7 +189,7 @@ IndexTable.renderTitle = function (data, type) {
         const id = data.arcid || data.id;
         const isTankoubon = id.startsWith('TANK_');
         const title = isTankoubon ? data.name : data.title;
-        const url = isTankoubon ? `/tankoubons?id=${id}` : `/reader?id=${id}`;
+        const url = isTankoubon ? `/tankoubon/${id.replace('TANK_', '')}` : `/reader?id=${id}`;
 
         // For compact mode, the thumbnail API call enforces no_fallback=true in order to queue Minion jobs for missing thumbnails.
         // (Since compact mode is the "base", it's always loaded first even if you're in table mode)

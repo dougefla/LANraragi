@@ -170,6 +170,9 @@ sub apply_routes {
     $logged_in_api->put('/api/tankoubons/:id/archives/:archive')->to('api-tankoubon#add_to_tankoubon');
     $logged_in_api->delete('/api/tankoubons/:id/archives/:archive')->to('api-tankoubon#remove_from_tankoubon');
 
+    # Tankoubon Web Routes
+    $logged_in->get('/tankoubon/:id')->to('tankoubon#view');
+
 }
 
 1;

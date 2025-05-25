@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 
 <head>
-    <title>[% title %] - Tankoubon Management</title>
+    <title>[% title %] - Tankoubon</title>
 
     <meta name="viewport" content="width=device-width" />
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
@@ -282,6 +282,43 @@
             padding: 40px;
             color: #666;
         }
+
+        /* Context menu styles */
+        .context-menu-list {
+            background: #2a2a2a;
+            border: 1px solid #444;
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .context-menu-item {
+            padding: 8px 12px;
+            color: #fff;
+            cursor: pointer;
+        }
+
+        .context-menu-item:hover {
+            background: #363636;
+        }
+
+        .context-menu-item.context-menu-hover {
+            background: #363636;
+        }
+
+        .context-menu-item i {
+            margin-right: 8px;
+            width: 16px;
+            text-align: center;
+        }
+
+        /* Prevent context menu from triggering the onclick event */
+        .tankoubon-item {
+            position: relative;
+        }
+
+        .tankoubon-item.context-menu-active {
+            background: #363636;
+        }
     </style>
 
     [% csshead %]
@@ -321,7 +358,7 @@
         <a href="[% c.url_for("/category_grid") %]">[% c.lh("Category Grid") %]</a>
         <span style="margin-left:5px"></span>
         <i class="fa fa-caret-right"></i>
-        <a href="[% c.url_for("/tankoubons") %]">[% c.lh("Tankoubon Management") %]</a>
+        <a href="[% c.url_for("/tankoubons") %]">[% c.lh("Tankoubon") %]</a>
         <span style="margin-left:5px"></span>
         <i class="fa fa-caret-right"></i>
         <a href="[% c.url_for("/stats") %]">[% c.lh("Statistics") %]</a>
@@ -339,7 +376,7 @@
     [% END %]
 
     <div class='ido' style='text-align:center'>
-        <h2 class='ih' style='text-align:center'>[% c.lh("Tankoubon Management") %]</h2>
+        <h2 class='ih' style='text-align:center'>[% c.lh("Tankoubon") %]</h2>
 
         <div id='toolbar' class='table-options'>
             <input id='new-tankoubon' type='button' value='[% c.lh("New Tankoubon") %]' class='stdbtn' />

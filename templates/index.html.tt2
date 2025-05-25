@@ -70,7 +70,7 @@
 		<a href="[% c.url_for("/category_grid") %]">[% c.lh("Category Grid") %]</a>
 		<span style="margin-left:5px"></span>
 		<i class="fa fa-caret-right"></i>
-		<a href="[% c.url_for("/tankoubons") %]">[% c.lh("Tankoubon Management") %]</a>
+		        <a href="[% c.url_for("/tankoubons") %]">[% c.lh("Tankoubon") %]</a>
 		<span style="margin-left:5px"></span>
 		<i class="fa fa-caret-right"></i>
 		<a href="[% c.url_for("/stats") %]">[% c.lh("Statistics") %]</a>
