@@ -70,9 +70,6 @@
 		<a href="[% c.url_for("/category_grid") %]">[% c.lh("Category Grid") %]</a>
 		<span style="margin-left:5px"></span>
 		<i class="fa fa-caret-right"></i>
-		<a href="[% c.url_for("/tankoubon") %]">[% c.lh("Tankoubon") %]</a>
-		<span style="margin-left:5px"></span>
-		<i class="fa fa-caret-right"></i>
 		<a href="[% c.url_for("/tankoubons") %]">[% c.lh("Tankoubon Management") %]</a>
 		<span style="margin-left:5px"></span>
 		<i class="fa fa-caret-right"></i>
@@ -343,9 +340,9 @@
 							"edit": { name: "[% c.lh('Edit Metadata') %]", icon: "fas fa-pencil-alt" },
 							"delete": { name: "[% c.lh('Delete') %]", icon: "fas fa-trash-alt" },
 							"rating": {
-								"name": "[% c.lh('Add Rating') %]",
-								"icon": "fas fa-star",
-								"items": Index.loadContextMenuRatings($trigger.attr("id"))
+							    "name": "[% c.lh('Add Rating') %]",
+							    "icon": "fas fa-star",
+							    "items": Index.loadContextMenuRatings($trigger.attr("id"))
 							},
 							"collections": {
 								"name": "[% c.lh('Add to Category') %]",

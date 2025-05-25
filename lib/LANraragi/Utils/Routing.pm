@@ -87,7 +87,6 @@ sub apply_routes {
     $logged_in->get('/logs/mojo')->to('logging#print_mojo');
     $logged_in->get('/logs/redis')->to('logging#print_redis');
 
-    $logged_in->get('/tankoubon')->to('tankoubon#index');
     $logged_in->get('/tankoubons')->to('tankoubon#management');
 
     $logged_in->get('/duplicates')->to('duplicates#index');
