@@ -282,38 +282,49 @@ LRR.buildBookmarkIconElement = function (id, bookmark_class) {
 };
 
 /**
- * Build a thumbnail div for the given archive data. Dynamically generates a bookmark icon,
+ * Build a thumbnail div for the given archive/tankoubon data. Dynamically generates a bookmark icon,
  * such that the toggleability depends on whether the user is logged in.
- * @param {*} data The archive data
+ * @param {*} data The archive/tankoubon data
  * @param {boolean} tagTooltip Option to build TagTooltip on mouseover
  * @returns HTML component string
  */
 LRR.buildThumbnailDiv = function (data, tagTooltip = true) {
     const thumbCss = (localStorage.cropthumbs === "true") ? "id3" : "id3 nocrop";
-    // The ID can be in a different field depending on the archive object...
+    // The ID can be in a different field depending on the archive/tankoubon object...
     const id = data.arcid || data.id;
-    let reader_url = new LRR.apiURL(`/reader?id=${id}`);
-    const bookmarkIcon = LRR.buildBookmarkIconElement(id, "thumbnail-bookmark-icon");
+    const isTankoubon = id.startsWith('TANK_');
+    let reader_url = new LRR.apiURL(`/${isTankoubon ? 'tankoubons' : 'reader'}?id=${id}`);
+    const bookmarkIcon = !isTankoubon ? LRR.buildBookmarkIconElement(id, "thumbnail-bookmark-icon") : '';
+
+    // For tankoubons, we need to handle the title differently
+    const title = isTankoubon ? data.name : data.title;
+    const tags = isTankoubon ? (data.tags || '') : data.tags;
 
     // Don't enforce no_fallback=true here, we don't want those divs to trigger Minion jobs 
-    return `<div class="id1 context-menu swiper-slide" id="${id}">
+    return `<div class="id1 context-menu swiper-slide ${isTankoubon ? 'tankoubon-thumb' : ''}" id="${id}">
                 <div class="id2">
-                    ${LRR.buildProgressDiv(data)}
-                    <a href="${reader_url}" title="${LRR.encodeHTML(data.title)}">${LRR.encodeHTML(data.title)}</a>
+                    ${!isTankoubon ? LRR.buildProgressDiv(data) : ''}
+                    <a href="${reader_url}" title="${LRR.encodeHTML(title)}">${LRR.encodeHTML(title)}</a>
                 </div>
                 <div class="${thumbCss}">
-                    <a href="${reader_url}" title="${LRR.encodeHTML(data.title)}">
+                    <a href="${reader_url}" title="${LRR.encodeHTML(title)}">
                         <img style="position:relative;" id="${id}_thumb" src="${new LRR.apiURL('/img/wait_warmly.jpg')}"/>
                         <i id="${id}_spinner" class="fa fa-4x fa-cog fa-spin ttspinner"></i>
-                        <img src="${new LRR.apiURL(`/api/archives/${id}/thumbnail`)}" 
+                        <img src="${isTankoubon ? 
+                            (data.cover_archive ? 
+                                new LRR.apiURL(`/api/archives/${data.cover_archive}/thumbnail`) : 
+                                (data.archives && data.archives.length > 0 ? 
+                                    new LRR.apiURL(`/api/archives/${data.archives[0]}/thumbnail`) : 
+                                    new LRR.apiURL('/img/noThumb.png'))) 
+                            : new LRR.apiURL(`/api/archives/${id}/thumbnail`)}" 
                                 onload="$('#${id}_thumb').remove(); $('#${id}_spinner').remove();" 
                                 onerror="this.src='${new LRR.apiURL("/img/noThumb.png")}'"/>
                     </a>
                     ${bookmarkIcon}
                 </div>
                 <div class="id4">
-                        <span class="tags tag-tooltip" ${tagTooltip === true ? "onmouseover=\"IndexTable.buildTagTooltip(this)\"" : ""}>${LRR.colorCodeTags(data.tags)}</span>
-                        ${tagTooltip === true ? `<div class="caption caption-tags" style="display: none;" >${LRR.buildTagsDiv(data.tags)}</div>` : ""}
+                        <span class="tags tag-tooltip" ${tagTooltip === true ? "onmouseover=\"IndexTable.buildTagTooltip(this)\"" : ""}>${LRR.colorCodeTags(tags)}</span>
+                        ${tagTooltip === true ? `<div class="caption caption-tags" style="display: none;" >${LRR.buildTagsDiv(tags)}</div>` : ""}
                 </div>
             </div>`;
 };

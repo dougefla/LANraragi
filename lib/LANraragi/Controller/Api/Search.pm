@@ -6,12 +6,22 @@ use List::Util qw(min);
 use LANraragi::Model::Search;
 use LANraragi::Utils::Generic  qw(render_api_response);
 use LANraragi::Utils::Database qw(invalidate_cache get_archive_json_multi);
+use LANraragi::Utils::Logging  qw(get_logger);
 
 # Undocumented API matching the Datatables spec.
 sub handle_datatables {
 
     my $self = shift;
     my $req  = $self->req;
+    my $logger = get_logger( "Search API", "lanraragi" );
+
+    # Log request method and content type
+    $logger->info("=== Search Request Received ===");
+    $logger->info("Request Method: " . $req->method);
+    $logger->info("Content Type: " . ($req->headers->content_type || "none"));
+    
+    # Log the full URL for debugging
+    $logger->info("Full URL: " . $req->url->to_string);
 
     my $draw   = $req->param('draw');
     my $start  = $req->param('start');
@@ -28,6 +38,27 @@ sub handle_datatables {
     my $categoryfilter = "";
     my $newfilter      = 0;
     my $untaggedfilter = 0;
+    
+    # Always set groupby_tanks to true
+    my $grouptanks = "true";
+    
+    $logger->info("Request Parameters:");
+    $logger->info("- draw: " . ($draw || ""));
+    $logger->info("- start: " . ($start || ""));
+    $logger->info("- length: " . ($length || ""));
+    $logger->info("- filter: " . ($filter || ""));
+    $logger->info("- sortindex: " . ($sortindex || ""));
+    $logger->info("- sortorder: " . ($sortorder || ""));
+    $logger->info("- sortkey: " . ($sortkey || ""));
+    $logger->info("- groupby_tanks (forced): true");
+
+    # Log all parameters in a safer way
+    $logger->info("All request parameters:");
+    my $params = $req->params->to_hash;
+    for my $key (sort keys %$params) {
+        my $value = $params->{$key} || "";
+        $logger->info("  $key: $value");
+    }
 
     while ( $req->param("columns[$i][name]") ) {
 
@@ -53,9 +84,8 @@ sub handle_datatables {
 
     $sortorder = ( $sortorder && $sortorder eq 'desc' ) ? 1 : 0;
 
-    # TODO add a parameter to datatables for grouptanks? Not really essential rn tho
     my ( $total, $filtered, @ids ) =
-      LANraragi::Model::Search::do_search( $filter, $categoryfilter, $start, $sortkey, $sortorder, $newfilter, $untaggedfilter, 0 );
+      LANraragi::Model::Search::do_search( $filter, $categoryfilter, $start, $sortkey, $sortorder, $newfilter, $untaggedfilter, $grouptanks eq "true" );
 
     $self->render( json => get_datatables_object( $draw, $total, $filtered, @ids ) );
 }

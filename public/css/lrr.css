@@ -917,3 +917,22 @@ body.infinite-scroll .fullscreen-infinite img {
         max-height: 196px;
     }
 }
+
+/* Tankoubon thumbnail styling */
+.tankoubon-thumb .id2 {
+    background-color: #43464E;
+}
+
+.tankoubon-thumb .id2 a {
+    color: #E0E0E0;
+}
+
+.tankoubon-thumb .id3 {
+    background-color: #43464E;
+    border: 1px solid #666;
+}
+
+.tankoubon-thumb .id4 {
+    background-color: #43464E;
+    color: #E0E0E0;
+}

@@ -12,8 +12,14 @@ IndexTable.currentSearch = "";
  * Initialize DataTables.
  */
 IndexTable.initializeAll = function () {
+    console.log("Initializing DataTables...");
+    
     // Bind events to DOM
-    $(document).on("click.apply-search", "#apply-search", () => { IndexTable.currentSearch = $("#search-input").val(); IndexTable.doSearch(); });
+    $(document).on("click.apply-search", "#apply-search", () => { 
+        console.log("Search button clicked");
+        IndexTable.currentSearch = $("#search-input").val(); 
+        IndexTable.doSearch(); 
+    });
     $(document).on("click.clear-search", "#clear-search", () => { IndexTable.currentSearch = ""; IndexTable.doSearch(); });
     $(document).on("keyup.search-input", "#search-input", (e) => {
         if (e.defaultPrevented) {
@@ -66,8 +72,14 @@ IndexTable.initializeAll = function () {
         serverSide: true,
         processing: true,
         ajax: {
-        url: "search",
-        cache: true,
+            url: "search",
+            cache: true
+        },
+        fnServerParams: function(data) {
+            // Add custom parameter based on checkbox state
+            const groupTanks = $("#group-tanks").prop("checked");
+            data.push({name: "groupby_tanks", value: groupTanks ? "true" : "false"});
+            console.log("DataTables request data with custom params:", data);
         },
         deferRender: true,
         lengthChange: false,
@@ -86,6 +98,7 @@ IndexTable.initializeAll = function () {
         columns: columns,
     });
 
+    console.log("DataTables initialized, consuming URL parameters...");
     // If the url has parameters, handle them now by doing the matching search.
     IndexTable.consumeURLParameters();
 };
@@ -97,6 +110,12 @@ IndexTable.initializeAll = function () {
  * @param {*} page Page to load
  */
 IndexTable.doSearch = function (page) {
+    console.log("Performing search:", {
+        currentSearch: IndexTable.currentSearch,
+        selectedCategory: Index.selectedCategory,
+        page: page
+    });
+    
     // Add the selected category to the tags column so it's picked up by the search engine
     // This allows for the regular search bar to be used in conjunction with categories.
     IndexTable.dataTable.column(".tags.itd").search(Index.selectedCategory);
@@ -167,19 +186,34 @@ IndexTable.renderColumn = function (namespace, type, data) {
  */
 IndexTable.renderTitle = function (data, type) {
     if (type === "display") {
+        const id = data.arcid || data.id;
+        const isTankoubon = id.startsWith('TANK_');
+        const title = isTankoubon ? data.name : data.title;
+        const url = isTankoubon ? `/tankoubons?id=${id}` : `/reader?id=${id}`;
+
         // For compact mode, the thumbnail API call enforces no_fallback=true in order to queue Minion jobs for missing thumbnails.
         // (Since compact mode is the "base", it's always loaded first even if you're in table mode)
-        const bookmarkIcon = LRR.buildBookmarkIconElement(data.arcid, "title-bookmark-icon");
-        return `${LRR.buildProgressDiv(data)}${bookmarkIcon}<a class="context-menu" id="${data.arcid}" onmouseover="IndexTable.buildImageTooltip(this)" href="${new LRR.apiURL(`/reader?id=${data.arcid}`)}"> 
-                    ${LRR.encodeHTML(data.title)}
+        const bookmarkIcon = !isTankoubon ? LRR.buildBookmarkIconElement(id, "title-bookmark-icon") : '';
+        const progressDiv = !isTankoubon ? LRR.buildProgressDiv(data) : '';
+
+        const thumbnailUrl = isTankoubon ? 
+            (data.cover_archive ? 
+                new LRR.apiURL(`/api/archives/${data.cover_archive}/thumbnail`) : 
+                (data.archives && data.archives.length > 0 ? 
+                    new LRR.apiURL(`/api/archives/${data.archives[0]}/thumbnail`) : 
+                    new LRR.apiURL('/img/noThumb.png'))) 
+            : new LRR.apiURL(`/api/archives/${id}/thumbnail?no_fallback=true`);
+
+        return `${progressDiv}${bookmarkIcon}<a class="context-menu" id="${id}" onmouseover="IndexTable.buildImageTooltip(this)" href="${new LRR.apiURL(url)}"> 
+                    ${LRR.encodeHTML(title)}
                 </a>
                 <div class="caption" style="display: none;">
-                    <img style="height:300px" src="${new LRR.apiURL(`/api/archives/${data.arcid}/thumbnail?no_fallback=true`)}" 
+                    <img style="height:300px" src="${thumbnailUrl}" 
                          onerror="this.src='${new LRR.apiURL('/img/noThumb.png')}'">
                 </div>`;
     }
 
-    return data.title;
+    return data.title || data.name;
 };
 
 /**
@@ -190,14 +224,15 @@ IndexTable.renderTitle = function (data, type) {
  */
 IndexTable.renderTags = function (data, type) {
     if (type === "display") {
+        const tags = typeof data === 'object' ? (data.tags || '') : data;
         return `<span class="tag-tooltip" onmouseover="IndexTable.buildTagTooltip(this)" style="text-overflow:ellipsis;">
-                    ${LRR.colorCodeTags(data)}
+                    ${LRR.colorCodeTags(tags)}
                 </span>
                 <div class="caption caption-tags" style="display: none;" >
-                    ${LRR.buildTagsDiv(data)}
+                    ${LRR.buildTagsDiv(tags)}
                 </div>`;
     }
-    return data;
+    return typeof data === 'object' ? (data.tags || '') : data;
 };
 
 // #endregion
