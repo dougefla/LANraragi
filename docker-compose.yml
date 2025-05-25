@@ -1,0 +1,29 @@
+---
+# Docker compose file for dev environments.
+services:
+  lanraragi:
+    build:
+      dockerfile: tools/build/docker/Dockerfile-dev
+      context: ../../..
+    volumes:
+      - ../../../:/home/koyomi/lanraragi
+    ports:
+      - "3000:3000"
+    environment:
+      - "LRR_REDIS_ADDRESS=redis:6379"
+    command: sh -c "cd /home/koyomi/lanraragi && npm install && npm run lanraragi-installer install-full && npm run dev-server"
+    networks:
+      - lrr
+
+  redis:
+    image: "docker.io/redis:7"
+    volumes:
+      - redis_data:/data
+    networks:
+      - lrr
+
+networks:
+  lrr:
+
+volumes:
+  redis_data: 

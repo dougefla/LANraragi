@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+
+<head>
+	<title>[% title %]</title>
+
+	<meta name="viewport" content="width=device-width" />
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+	<link type="image/png" rel="icon" href="favicon.ico" />
+	<link rel="stylesheet" type="text/css" href="[% c.url_for("/css/lrr.css?$version") %]" />
+	<link rel="stylesheet" type="text/css" href="[% c.url_for("/css/vendor/fontawesome-all.min.css") %]" />
+	<link rel="stylesheet" type="text/css" href="[% c.url_for("/css/vendor/ReactToastify.min.css") %]" />
+	[% csshead %]
+
+	<script src="[% c.url_for("/js/vendor/jquery.min.js") %]" type="text/JAVASCRIPT"></script>
+	<script src="[% c.url_for("/js/vendor/preact.umd.js") %]" type="text/JAVASCRIPT"></script>
+	<script src="[% c.url_for("/js/vendor/hooks.umd.js") %]" type="text/JAVASCRIPT"></script>
+	<script src="[% c.url_for("/js/vendor/compat.umd.js") %]" type="text/JAVASCRIPT"></script>
+	<script>window.React = window.preactCompat; window.react = window.preactCompat;</script>
+	<script src="[% c.url_for("/js/vendor/clsx.min.js") %]" type="text/JAVASCRIPT"></script>
+	<script src="[% c.url_for("/js/vendor/react-toastify.umd.js") %]" type="text/JAVASCRIPT"></script>
+	<script src="[% c.url_for("/js/i18n.js?$version") %]" type="text/JAVASCRIPT"></script>
+	<script src="[% c.url_for("/js/common.js?$version") %]" type="text/JAVASCRIPT"></script>
+	<script src="[% c.url_for("/js/server.js?$version") %]" type="text/JAVASCRIPT"></script>
+	<script src="[% c.url_for("/js/category_grid.js?$version") %]" type="text/JAVASCRIPT"></script>
+</head>
+
+<body>
+
+	<div class='ido'>
+		<h1 class='ih'>[% c.lh("Category Grid View") %]</h1>
+		<div id='toppane'>
+			<div class='idi'>
+				<div class="grid-options">
+					<div class="view-options">
+						<input id="show-pinned-only" class="fa table-option" type="checkbox">
+						<label for="show-pinned-only" style="vertical-align: middle; padding-top:6px">[% c.lh("Show Pinned Only") %]</label>
+						<input id="show-static-only" class="fa table-option" type="checkbox">
+						<label for="show-static-only" style="vertical-align: middle; padding-top:6px">[% c.lh("Show Static Only") %]</label>
+					</div>
+					<div style="margin-left:auto">
+						<a href="[% c.url_for("/") %]" class="fa fa-2x fa-home table-option" title="[% c.lh('Return to Library') %]"></a>
+					</div>
+				</div>
+
+				<div id="category_grid_container">
+					<!-- Categories will be loaded here -->
+				</div>
+			</div>
+		</div>
+	</div>
+
+	[% INCLUDE footer %]
+</body>
+
+</html> 
