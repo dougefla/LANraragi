@@ -12,21 +12,31 @@ use LANraragi::Utils::Database qw(redis_decode);
 
 # Go through the archives in the content directory and build the template at the end.
 sub index {
-
-    my $self  = shift;
-    my $redis = $self->LRR_CONF->get_redis;
-    my $force = 0;
+    my $self = shift;
 
     my $userlogged = $self->LRR_CONF->enable_pass == 0 || $self->session('is_logged');
 
-    $redis->quit();
+    $self->render(
+        template   => "tankoubon",
+        title      => $self->LRR_CONF->get_htmltitle,
+        csshead    => generate_themes_header($self),
+        version    => $self->LRR_VERSION,
+        userlogged => $userlogged
+    );
+}
+
+# Management view
+sub management {
+    my $self = shift;
+
+    my $userlogged = $self->LRR_CONF->enable_pass == 0 || $self->session('is_logged');
 
     $self->render(
-        template => "tankoubon",
-        title    => $self->LRR_CONF->get_htmltitle,
-        descstr  => $self->LRR_DESC,
-        csshead  => generate_themes_header($self),
-        version  => $self->LRR_VERSION
+        template   => "tankoubons",
+        title      => $self->LRR_CONF->get_htmltitle,
+        csshead    => generate_themes_header($self),
+        version    => $self->LRR_VERSION,
+        userlogged => $userlogged
     );
 }
 

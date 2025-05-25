@@ -46,6 +46,7 @@
 	<script src="[% c.url_for("/js/common.js?$version") %]" type="text/JAVASCRIPT"></script>
 	<script src="[% c.url_for("/js/server.js?$version") %]" type="text/JAVASCRIPT"></script>
 	<script src="[% c.url_for("/js/index_datatables.js?$version") %]" type="text/JAVASCRIPT"></script>
+	<script src="[% c.url_for("/js/tankoubon.js?$version") %]" type="text/JAVASCRIPT"></script>
 
 </head>
 
@@ -67,6 +68,12 @@
 		<span style="margin-left:5px"></span>
 		<i class="fa fa-caret-right"></i>
 		<a href="[% c.url_for("/category_grid") %]">[% c.lh("Category Grid") %]</a>
+		<span style="margin-left:5px"></span>
+		<i class="fa fa-caret-right"></i>
+		<a href="[% c.url_for("/tankoubon") %]">[% c.lh("Tankoubon") %]</a>
+		<span style="margin-left:5px"></span>
+		<i class="fa fa-caret-right"></i>
+		<a href="[% c.url_for("/tankoubons") %]">[% c.lh("Tankoubon Management") %]</a>
 		<span style="margin-left:5px"></span>
 		<i class="fa fa-caret-right"></i>
 		<a href="[% c.url_for("/stats") %]">[% c.lh("Statistics") %]</a>
@@ -218,9 +225,115 @@
 			$.contextMenu({
 				selector: '.context-menu',
 				build: ($trigger, e) => {
+					const archiveId = $trigger.attr("id");
 					return {
 						callback: function (key, options) {
-							Index.handleContextMenu(key, $(this).attr("id"));
+							if (key === "addtotankoubon") {
+								$.ajax({
+									url: "api/tankoubons",
+									type: "GET",
+									success: function (tankoubons) {
+										let options = "";
+										
+										// Add option to create new tankoubon
+										options += `<option value="new">${I18N.NewTankoubon}</option>`;
+										options += `<option disabled>──────────</option>`;
+										
+										// Add existing tankoubons
+										tankoubons.forEach(tank => 
+											options += `<option value="${tank.id}">${tank.name}</option>`
+										);
+
+										let html = `
+											<div>
+												<p>${I18N.SelectTankoubon}</p>
+												<select id="tankoubon-select" class="favtag-btn">
+													${options}
+												</select>
+											</div>
+										`;
+
+										LRR.showPopUp({
+											title: I18N.AddToTankoubon,
+											html: html,
+											showCancelButton: true,
+											confirmButtonText: I18N.Add,
+											preConfirm: () => {
+												return $('#tankoubon-select').val();
+											}
+										}).then((result) => {
+											if (result.isConfirmed) {
+												if (result.value === "new") {
+													// Show dialog to create new tankoubon
+													LRR.showPopUp({
+														title: I18N.NewTankoubon,
+														input: "text",
+														inputValue: I18N.TankoubonDefaultName,
+														showCancelButton: true,
+														inputValidator: (value) => {
+															if (!value) {
+																return I18N.MissingTankoubonName;
+															}
+														}
+													}).then((createResult) => {
+														if (createResult.isConfirmed) {
+															// Create tankoubon and add archive to it
+															$.ajax({
+																url: "api/tankoubons",
+																type: "PUT",
+																data: { name: createResult.value },
+																success: function (data) {
+																	if (data.success) {
+																		$.ajax({
+																			url: "api/tankoubons/" + data.tankoubon_id + "/archives/" + archiveId,
+																			type: "PUT",
+																			success: function (data) {
+																				if (data.success) {
+																					LRR.toast({
+																						heading: "Success!",
+																						text: data.message,
+																						icon: "success"
+																					});
+																				} else {
+																					LRR.showErrorToast("Error adding archive: " + data.error);
+																				}
+																			}
+																		});
+																	} else {
+																		LRR.showErrorToast("Error creating tankoubon: " + data.error);
+																	}
+																}
+															});
+														}
+													});
+												} else {
+													// Add to existing tankoubon
+													$.ajax({
+														url: "api/tankoubons/" + result.value + "/archives/" + archiveId,
+														type: "PUT",
+														success: function (data) {
+															if (data.success) {
+																LRR.toast({
+																	heading: "Success!",
+																	text: data.message,
+																	icon: "success"
+																});
+															} else {
+																LRR.showErrorToast("Error adding archive: " + data.error);
+															}
+														}
+													});
+												}
+											}
+										});
+									},
+									error: function (xhr, status, error) {
+										LRR.showErrorToast("Error loading tankoubons: " + error);
+									}
+								});
+							} else {
+								Index.handleContextMenu(key, archiveId);
+							}
 						},
 						items: {
 							"read": { name: "[% c.lh('Read') %]", icon: "fas fa-book" },
@@ -230,14 +343,18 @@
 							"edit": { name: "[% c.lh('Edit Metadata') %]", icon: "fas fa-pencil-alt" },
 							"delete": { name: "[% c.lh('Delete') %]", icon: "fas fa-trash-alt" },
 							"rating": {
-							    "name": "[% c.lh('Add Rating') %]",
-							    "icon": "fas fa-star",
-							    "items": Index.loadContextMenuRatings($trigger.attr("id"))
+								"name": "[% c.lh('Add Rating') %]",
+								"icon": "fas fa-star",
+								"items": Index.loadContextMenuRatings($trigger.attr("id"))
 							},
 							"collections": {
 								"name": "[% c.lh('Add to Category') %]",
 								"icon": "fas fa-search-plus",
 								"items": Index.loadContextMenuCategories(catList, $trigger.attr("id"))
+							},
+							"addtotankoubon": {
+								"name": "[% c.lh('Add to Tankoubon') %]",
+								"icon": "fas fa-book"
 							}
 							[% END %]
 						}

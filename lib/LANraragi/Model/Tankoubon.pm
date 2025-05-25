@@ -15,7 +15,7 @@ use LANraragi::Utils::Database qw(redis_encode redis_decode invalidate_cache get
 use LANraragi::Utils::Generic  qw(array_difference filter_hash_by_keys);
 use LANraragi::Utils::Logging  qw(get_logger);
 
-my %TANK_METADATA = ( "name", 0, "summary", -1, "tags", -2 );
+my %TANK_METADATA = ( "name" => 0, "summary" => -1, "tags" => -2, "cover_archive" => -3 );
 
 # get_tankoubon_list(page)
 #   Returns a list of all the Tankoubon objects.
@@ -41,7 +41,7 @@ sub get_tankoubon_list ( $page = 0 ) {
 
     # Return total keys and the filtered ones
     my $total = $#tanks + 1;
-    my $start = $page * $keysperpage;
+    my $start = ($page + 0) * $keysperpage;  # Force numeric context for $page
     my $end   = min( $start + $keysperpage - 1, $#result );
 
     if ( $page < 0 ) {
@@ -129,9 +129,10 @@ sub get_tankoubon ( $tank_id, $fulldata = 0, $page = 0 ) {
     }
 
     # Declare some needed variables
-    my @allowed_keys = ( 'name', 'summary', 'tags', 'archives', 'full_data', 'id' );
+    my @allowed_keys = ( 'name', 'summary', 'tags', 'archives', 'full_data', 'id', 'cover_archive' );
     my @archives;
-    my @limit = split( ' ', "LIMIT " . ( $keysperpage * $page ) . " $keysperpage" );
+    my $offset = ($page + 0) * ($keysperpage + 0);  # Force numeric context
+    my @limit = split( ' ', "LIMIT $offset $keysperpage" );
     my %tank  = fetch_metadata_fields($tank_id);
 
     my %tankoubon;
@@ -224,7 +225,7 @@ sub update_tankoubon ( $tank_id, $data ) {
 #   Returns 1 on success, 0 on failure alongside an error message.
 sub update_metadata ( $tank_id, $data ) {
 
-    if ( not defined $data->{"metadata"} ) {
+    if ( not defined $data->{"metadata"} and not defined $data->{"cover_archive"} ) {
         return ( 1, "" );
     }
 
@@ -234,6 +235,7 @@ sub update_metadata ( $tank_id, $data ) {
     my $name    = $data->{"metadata"}->{"name"}    || undef;
     my $summary = exists $data->{"metadata"}->{"summary"} ? $data->{"metadata"}->{"summary"} : undef;
     my $tags = exists $data->{"metadata"}->{"tags"} ? $data->{"metadata"}->{"tags"} : undef;
+    my $cover_archive = $data->{"cover_archive"} || undef;
 
     if ( $redis->exists($tank_id) ) {
         if ( defined $name ) {
@@ -246,6 +248,10 @@ sub update_metadata ( $tank_id, $data ) {
 
         if ( defined $tags ) {
             update_metadata_field( $tank_id, "tags", $tags );
+        }
+
+        if ( defined $cover_archive ) {
+            update_metadata_field( $tank_id, "cover_archive", $cover_archive );
         }
 
         $redis->quit;

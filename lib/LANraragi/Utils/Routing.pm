@@ -87,7 +87,8 @@ sub apply_routes {
     $logged_in->get('/logs/mojo')->to('logging#print_mojo');
     $logged_in->get('/logs/redis')->to('logging#print_redis');
 
-    $logged_in->get('/tankoubons')->to('tankoubon#index');
+    $logged_in->get('/tankoubon')->to('tankoubon#index');
+    $logged_in->get('/tankoubons')->to('tankoubon#management');
 
     $logged_in->get('/duplicates')->to('duplicates#index');
 
@@ -167,8 +168,8 @@ sub apply_routes {
     $logged_in_api->put('/api/tankoubons')->to('api-tankoubon#create_tankoubon');
     $logged_in_api->put('/api/tankoubons/:id')->to('api-tankoubon#update_tankoubon');
     $logged_in_api->delete('/api/tankoubons/:id')->to('api-tankoubon#delete_tankoubon');
-    $logged_in_api->put('/api/tankoubons/:id/:archive')->to('api-tankoubon#add_to_tankoubon');
-    $logged_in_api->delete('/api/tankoubons/:id/:archive')->to('api-tankoubon#remove_from_tankoubon');
+    $logged_in_api->put('/api/tankoubons/:id/archives/:archive')->to('api-tankoubon#add_to_tankoubon');
+    $logged_in_api->delete('/api/tankoubons/:id/archives/:archive')->to('api-tankoubon#remove_from_tankoubon');
 
 }
 

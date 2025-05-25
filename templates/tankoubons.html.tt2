@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+
+<head>
+    <title>[% title %] - Tankoubon Management</title>
+
+    <meta name="viewport" content="width=device-width" />
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+    <link type="image/png" rel="icon" href="favicon.ico" />
+    <link rel="stylesheet" type="text/css" href="[% c.url_for('/css/lrr.css?version=' _ version) %]" />
+    <link rel="stylesheet" type="text/css" href="[% c.url_for('/css/vendor/fontawesome-all.min.css') %]" />
+    <link rel="stylesheet" type="text/css" href="[% c.url_for('/css/vendor/ReactToastify.min.css') %]" />
+    <link rel="stylesheet" type="text/css" href="[% c.url_for('/css/vendor/sweetalert2.min.css') %]" />
+
+    <style>
+        .empty-message {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+            font-size: 1.2em;
+        }
+        
+        .empty-message i {
+            font-size: 3em;
+            margin-bottom: 20px;
+            color: #999;
+        }
+
+        .table-list {
+            width: 99% !important;
+            max-width: 90%;
+            border-collapse: collapse;
+            margin: 0 auto;
+            padding: 3px;
+            font-size: 9pt;
+            border: 1px solid #363940;
+            border-radius: 9px;
+            table-layout: fixed;
+        }
+
+        .table-list th {
+            font-weight: bold;
+            text-align: left;
+            padding: 3px 4px;
+            background: #363940;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .table-list td {
+            text-align: left;
+            padding: 3px 4px;
+            border-right: 1px solid #40454b;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .table-list tr:nth-child(odd) {
+            background: #4F535B;
+        }
+
+        .table-list tr:nth-child(even) {
+            background: #363940;
+        }
+
+        .tank-name {
+            font-weight: bold;
+        }
+
+        .table-actions {
+            text-align: right;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+
+        .button-group .stdbtn {
+            padding: 6px 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .button-group .stdbtn i {
+            font-size: 0.9em;
+        }
+
+        #toolbar {
+            display: flex;
+            align-items: center;
+            padding: 10px 0;
+            margin-bottom: 20px;
+        }
+
+        .archive-dialog {
+            max-width: 90% !important;
+        }
+
+        .archive-list {
+            margin: 20px 0;
+        }
+
+        .archive-list table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .archive-list th {
+            background-color: #4f535b;
+            color: white;
+            padding: 12px;
+            text-align: left;
+        }
+
+        .archive-list td {
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .archive-list .stdbtn {
+            padding: 6px 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .order-input {
+            width: 60px;
+            padding: 4px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        .order-input:focus {
+            border-color: #4f535b;
+            outline: none;
+        }
+
+        .order-actions {
+            margin-top: 20px;
+            text-align: right;
+        }
+
+        .order-actions .stdbtn {
+            padding: 8px 16px;
+            font-size: 14px;
+        }
+
+        /* Make the up/down/remove buttons more compact in the actions column */
+        .archive-list .button-group .stdbtn {
+            padding: 6px;
+            min-width: 32px;
+        }
+
+        .archive-list .button-group .stdbtn i {
+            margin: 0;
+        }
+
+        /* Tankoubon management buttons */
+        .tankoubon-actions {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 4px;
+        }
+
+        .tankoubon-actions .stdbtn {
+            padding: 8px 16px;
+            font-size: 14px;
+        }
+
+        .tankoubon-actions .delete-btn {
+            margin-left: auto;
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .tankoubon-actions .delete-btn:hover {
+            background-color: #c82333;
+        }
+
+        /* Make table rows clickable */
+        .table-list tr:hover {
+            background-color: #f5f5f5;
+        }
+
+        /* Grid View */
+        .grid-view {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(228px, 1fr));
+            gap: 5px;
+            padding: 5px;
+        }
+
+        .tankoubon-card {
+            background: none repeat scroll 0 0 #43464E;
+            border: 1px none;
+            border-radius: 9px;
+            display: inline-block;
+            margin: 3px 2px 2px 3px;
+            padding-top: 3px;
+            vertical-align: top;
+            min-height: 335px;
+        }
+
+        .tankoubon-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .tankoubon-card .preview {
+            height: 280px;
+            margin: auto;
+            overflow: hidden;
+            position: relative;
+            text-align: center;
+        }
+
+        .tankoubon-card .preview img {
+            max-width: 95%;
+            max-height: 275px;
+            object-fit: contain;
+            border-radius: 7px;
+        }
+
+        .tankoubon-card .info {
+            padding: 5px;
+        }
+
+        .tankoubon-card .name {
+            font-weight: bold;
+            min-height: 32px;
+            margin: auto;
+            text-align: center;
+            width: 97%;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .tankoubon-card .stats {
+            height: 20px;
+            margin: auto;
+            position: relative;
+            text-align: center;
+            padding: 0 4px;
+            color: #666;
+            font-size: 0.9em;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* View Toggle Button */
+        .view-toggle {
+            display: flex;
+            gap: 5px;
+            margin-right: 10px;
+        }
+
+        .view-toggle .stdbtn {
+            padding: 6px 12px;
+            opacity: 0.6;
+        }
+
+        .view-toggle .stdbtn.active {
+            opacity: 1;
+            background-color: #4f535b;
+            color: white;
+        }
+
+        /* No Results Message */
+        .no-results {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+    </style>
+
+    [% csshead %]
+
+    <script src="[% c.url_for('/js/vendor/jquery.min.js') %]" type="text/JAVASCRIPT"></script>
+    <script src="[% c.url_for('/js/vendor/preact.umd.js') %]" type="text/JAVASCRIPT"></script>
+    <script src="[% c.url_for('/js/vendor/hooks.umd.js') %]" type="text/JAVASCRIPT"></script>
+    <script src="[% c.url_for('/js/vendor/compat.umd.js') %]" type="text/JAVASCRIPT"></script>
+    <script>window.React = window.preactCompat; window.react = window.preactCompat;</script>
+    <script src="[% c.url_for('/js/vendor/clsx.min.js') %]" type="text/JAVASCRIPT"></script>
+    <script src="[% c.url_for('/js/vendor/react-toastify.umd.js') %]" type="text/JAVASCRIPT"></script>
+    <script src="[% c.url_for('/js/vendor/sweetalert2.min.js') %]" type="text/JAVASCRIPT"></script>
+    
+    <script src="[% c.url_for('/js/i18n.js?version=' _ version) %]" type="text/JAVASCRIPT"></script>
+    <script src="[% c.url_for('/js/common.js?version=' _ version) %]" type="text/JAVASCRIPT"></script>
+    <script src="[% c.url_for('/js/server.js?version=' _ version) %]" type="text/JAVASCRIPT"></script>
+    <script src="[% c.url_for('/js/tankoubon.js?version=' _ version) %]" type="text/JAVASCRIPT"></script>
+</head>
+
+<body>
+
+    [% IF userlogged %]
+    <p id="nb">
+        <i class="fa fa-caret-right"></i>
+        <a href="[% c.url_for("/upload") %]">[% c.lh("Add Archives") %]</a>
+        <span style="margin-left:5px"></span>
+        <i class="fa fa-caret-right"></i>
+        <a href="[% c.url_for("/batch") %]">[% c.lh("Batch Operations") %]</a>
+        <span style="margin-left:5px"></span>
+        <i class="fa fa-caret-right"></i>
+        <a href="[% c.url_for("/config") %]">[% c.lh("Settings") %]</a>
+        <span style="margin-left:5px"></span>
+        <i class="fa fa-caret-right"></i>
+        <a href="[% c.url_for("/config/categories") %]">[% c.lh("Modify Categories") %]</a>
+        <span style="margin-left:5px"></span>
+        <i class="fa fa-caret-right"></i>
+        <a href="[% c.url_for("/category_grid") %]">[% c.lh("Category Grid") %]</a>
+        <span style="margin-left:5px"></span>
+        <i class="fa fa-caret-right"></i>
+        <a href="[% c.url_for("/tankoubons") %]">[% c.lh("Tankoubon Management") %]</a>
+        <span style="margin-left:5px"></span>
+        <i class="fa fa-caret-right"></i>
+        <a href="[% c.url_for("/stats") %]">[% c.lh("Statistics") %]</a>
+        <i class="fa fa-caret-right"></i>
+        <a href="[% c.url_for("/logs") %]">[% c.lh("Logs") %]</a>
+    </p>
+    [% ELSE %]
+    <p id="nb">
+        <i class="fa fa-caret-right"></i>
+        <a href="[% c.url_for("/login") %]">[% c.lh("Admin Login") %]</a>
+        <span style="margin-left:5px"></span>
+        <i class="fa fa-caret-right"></i>
+        <a href="[% c.url_for("/stats") %]">[% c.lh("Statistics") %]</a>
+    </p>
+    [% END %]
+
+    <div class='ido' style='text-align:center'>
+        <h2 class='ih' style='text-align:center'>[% c.lh("Tankoubon Management") %]</h2>
+
+        <div id='toolbar' class='table-options'>
+            <input id='new-tankoubon' type='button' value='[% c.lh("New Tankoubon") %]' class='stdbtn' />
+            <div style='margin-left: auto;'>
+                <div class='view-toggle'>
+                    <button id='list-view' class='stdbtn active' title='List View'>
+                        <i class='fas fa-list'></i>
+                    </button>
+                    <button id='grid-view' class='stdbtn' title='Grid View'>
+                        <i class='fas fa-th'></i>
+                    </button>
+                </div>
+                <input id='refresh' type='button' value='[% c.lh("Refresh") %]' class='stdbtn' style='float: right;' />
+            </div>
+        </div>
+
+        <div id='tankoubon-list'>
+            <!-- Tankoubon list will be loaded here by JavaScript -->
+            <i class='fa fa-4x fa-compact-disc fa-spin' style='margin: 20px'></i>
+        </div>
+
+        <br><br>
+        <input id='return' class='stdbtn' type='button' value='[% c.lh("Return to Library") %]' />
+    </div>
+
+    [% INCLUDE footer %]
+</body>
+
+</html> 

@@ -161,3 +161,16 @@ I18N.UploadTotal = "[% c.lh("Total") %]";
 I18N.ClickToEdit = "[% c.lh("Click here to edit metadata.") %]";
 I18N.UploadError = "[% c.lh("Error while processing file.") %]";
 I18N.DownloadError = "[% c.lh("Error while downloading file.") %]";
+
+// Tankoubon-related translations
+I18N.NewTankoubon = "[% c.lh("Enter a name for the new tankoubon") %]";
+I18N.TankoubonDefaultName = "[% c.lh("My Tankoubon") %]";
+I18N.MissingTankoubonName = "[% c.lh("Please enter a tankoubon name.") %]";
+I18N.TankoubonFetchError = "[% c.lh("Error getting tankoubons from server") %]";
+I18N.TankoubonEditError = "[% c.lh("Error modifying tankoubon") %]";
+I18N.TankoubonDeleteConfirm = "[% c.lh("The tankoubon will be deleted permanently.") %]";
+I18N.TankoubonDeleted = "[% c.lh("Tankoubon deleted!") %]";
+I18N.TankoubonDeleteError = "[% c.lh("Error deleting tankoubon") %]";
+I18N.AddToTankoubon = "[% c.lh("Add to Tankoubon") %]";
+I18N.SelectTankoubon = "[% c.lh("Select a tankoubon to add this archive to") %]";
+I18N.Add = "[% c.lh("Add") %]";

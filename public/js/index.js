@@ -969,6 +969,73 @@ Index.getColumnCount = function () {
     return localStorage.getItem("columnCount") ? parseInt(localStorage.getItem("columnCount")) : 2;
 }
 
+/**
+ * Load available tankoubons for the context menu.
+ * @param {string} arcid Archive ID
+ * @returns Object containing the context menu items for tankoubons
+ */
+Index.loadContextMenuTankoubons = function (arcid) {
+    const items = {};
+
+    // Add "Create New Tankoubon" option
+    items["new"] = {
+        name: I18N.NewTankoubon,
+        icon: "fas fa-plus",
+        callback: function () {
+            LRR.showPopUp({
+                title: I18N.NewTankoubon,
+                input: "text",
+                inputValue: I18N.TankoubonDefaultName,
+                showCancelButton: true,
+                inputValidator: (value) => {
+                    if (!value) {
+                        return I18N.MissingTankoubonName;
+                    }
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Create tankoubon and add archive to it
+                    $.ajax({
+                        url: "api/tankoubons",
+                        type: "PUT",
+                        data: { name: result.value },
+                        success: function (data) {
+                            if (data.success) {
+                                Tankoubon.addArchive(data.tankoubon_id, arcid);
+                            } else {
+                                LRR.showErrorToast("Error creating tankoubon: " + data.error);
+                            }
+                        }
+                    });
+                }
+            });
+        }
+    };
+
+    // Add separator
+    items["sep"] = "---------";
+
+    // Get existing tankoubons
+    $.ajax({
+        url: "api/tankoubons",
+        type: "GET",
+        async: false,
+        success: function (data) {
+            data.forEach(function (tank) {
+                items[tank.id] = {
+                    name: tank.name,
+                    icon: "fas fa-book",
+                    callback: function () {
+                        Tankoubon.addArchive(tank.id, arcid);
+                    }
+                };
+            });
+        }
+    });
+
+    return items;
+};
+
 jQuery(() => {
     Index.initializeAll();
 });
