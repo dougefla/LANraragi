@@ -298,13 +298,13 @@
                 </div>
                 <div class='tankoubon-actions'>
                     <button class='stdbtn edit-btn' onclick='TankoubonView.editTankoubon()'>
-                        <i class='fas fa-edit'></i> Edit
+                        <i class='fas fa-edit'></i> [% c.lh("Edit") %]
                     </button>
                     <button class='stdbtn' onclick='TankoubonView.manageArchives()'>
-                        <i class='fas fa-list'></i> Manage Archives
+                        <i class='fas fa-list'></i> [% c.lh("Manage Archives") %]
                     </button>
                     <button class='stdbtn delete-btn' onclick='TankoubonView.deleteTankoubon()'>
-                        <i class='fas fa-trash'></i> Delete
+                        <i class='fas fa-trash'></i> [% c.lh("Delete") %]
                     </button>
                 </div>
             </div>
@@ -312,13 +312,13 @@
 
         <div class='view-modes'>
             <button class='stdbtn view-mode-btn active' data-mode='grid'>
-                <i class='fas fa-th'></i> Grid View
+                <i class='fas fa-th'></i> [% c.lh("Grid View") %]
             </button>
             <button class='stdbtn view-mode-btn' data-mode='list'>
-                <i class='fas fa-list'></i> List View
+                <i class='fas fa-list'></i> [% c.lh("List View") %]
             </button>
             <button class='stdbtn view-mode-btn' data-mode='continuous'>
-                <i class='fas fa-scroll'></i> Continuous View
+                <i class='fas fa-scroll'></i> [% c.lh("Continuous View") %]
             </button>
         </div>
 

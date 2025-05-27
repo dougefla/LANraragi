@@ -104,7 +104,7 @@ msgid "Server Configuration"
 msgstr "服务器配置"
 
 msgid "This removes the \"new\" flag from the selected archives."
-msgstr "这将移除选定档案的“新”标记。"
+msgstr "这将移除选定档案的"新"标记。"
 
 msgid "Add to Category :"
 msgstr "添加到分类："
@@ -293,7 +293,7 @@ msgid "Clear NEW flags"
 msgstr "清除NEW标记"
 
 msgid "Newly uploaded archives are marked as \"new\" in the index until you\'ve opened them."
-msgstr "新上传的档案在索引中标记为“新”状态，直到您打开它们。"
+msgstr "新上传的档案在索引中标记为"新"状态，直到您打开它们。"
 
 msgid "If you want to clear those flags, click this button."
 msgstr "如果要清除这些标记，请点击此按钮。"
@@ -514,7 +514,7 @@ msgstr "如果启用，LANraragi 将在 \"date_added\" 命名空间下将当前�
 "时间戳作为标签添加到新添加的存档中。"
 
 msgid "Use \"Last modified\" Time"
-msgstr "使用“最后修改”时间"
+msgstr "使用"最后修改"时间"
 
 msgid "Enabling this will use file modified time instead of current time when setting \"date_added\" timestamps."
 msgstr "启用此选项将在设置 \"date_added\" 时间戳时使用文件修改时间而不是当前时间。"
@@ -554,7 +554,7 @@ msgid "The selected theme will apply to the entire application and be shown to a
 msgstr "所选主题将应用于整个程序，并显示给所有用户。"
 
 msgid "If you're using a browser that supports \"theme-color\", the theme's primary color will also be applied there."
-msgstr "如果您使用支持“主题颜色”的浏览器，主题的首要颜色也会应用。"
+msgstr "如果您使用支持"主题颜色"的浏览器，主题的首要颜色也会应用。"
 
 msgid "Click on a theme to preview it before saving!"
 msgstr "在保存之前，点击相应的主题来进行预览！"
@@ -1343,7 +1343,7 @@ msgid "Enter a tag namespace for this column"
 msgstr "为此栏输入标签命名空间"
 
 msgid "Enter a full namespace without the colon, e.g \"artist\"."
-msgstr "请输入完整的命名空间（不带冒号），例如“artist”。"
+msgstr "请输入完整的命名空间（不带冒号），例如"artist"。"
 
 msgid "If you have multiple tags with the same namespace, only the last one will be shown in the column."
 msgstr "如果同一命名空间有多个标签，此栏只会显示最后一个标签。"
@@ -1589,7 +1589,7 @@ msgid "This page allows you to search for potential duplicates in your library."
 msgstr "此界面可搜索库中潜在的重复项。"
 
 msgid "Clicking \"Start searching\" will start a background job to scan the entire library for dupes."
-msgstr "点击“开始搜索”将启动查找库中重复项的后台任务。"
+msgstr "点击"开始搜索"将启动查找库中重复项的后台任务。"
 
 msgid "After which, you can select which archives to delete, and then delete them in bulk."
 msgstr "之后，可以选择要删除的档案，然后批量删除。"
@@ -1669,3 +1669,120 @@ msgstr "此插件依赖登录插件"
 
 msgid "Trigger Script"
 msgstr "触发脚本"
+
+msgid "Category Grid View"
+msgstr "分类网格视图"
+
+msgid "Show Pinned Only"
+msgstr "仅显示已固定"
+
+msgid "Show Static Only"
+msgstr "仅显示静态"
+
+msgid "Enter a name for the new tankoubon"
+msgstr "输入新单行本的名称"
+
+msgid "My Tankoubon"
+msgstr "我的单行本"
+
+msgid "Please enter a tankoubon name."
+msgstr "请输入单行本名称。"
+
+msgid "Error getting tankoubons from server"
+msgstr "从服务器获取单行本时出错"
+
+msgid "Error modifying tankoubon"
+msgstr "修改单行本时出错"
+
+msgid "The tankoubon will be deleted permanently."
+msgstr "此单行本将被永久删除。"
+
+msgid "Category Grid"
+msgstr "分类网格"
+
+msgid "Tankoubon"
+msgstr "单行本"
+
+msgid "Select Mode"
+msgstr "选择模式"
+
+msgid "Add to Tankoubon"
+msgstr "添加到单行本"
+
+msgid "Delete Selected"
+msgstr "删除所选"
+
+msgid "Group Tankoubon"
+msgstr "分组单行本"
+
+msgid "View Details"
+msgstr "查看详情"
+
+msgid "Edit Name"
+msgstr "编辑名称"
+
+msgid "Tankoubon deleted!"
+msgstr "单行本已删除！"
+
+msgid "Error deleting tankoubon"
+msgstr "删除单行本时出错"
+
+msgid "Select a tankoubon to add this archive to"
+msgstr "选择要将此档案添加到的单行本"
+
+msgid "Add"
+msgstr "添加"
+
+msgid "New Tankoubon"
+msgstr "新建单行本"
+
+msgid "Grid View"
+msgstr "网格视图"
+
+msgid "List View"
+msgstr "列表视图"
+
+msgid "Continuous View"
+msgstr "连续视图"
+
+msgid "Edit"
+msgstr "编辑"
+
+msgid "Manage Archives"
+msgstr "管理档案"
+
+msgid "Delete"
+msgstr "删除"
+
+msgid "Return to Tankoubons"
+msgstr "返回单行本列表"
+
+msgid "Archives"
+msgstr "档案"
+
+msgid "Tags:"
+msgstr "标签："
+
+msgid "Working on it..."
+msgstr "处理中..."
+
+msgid "Refresh"
+msgstr "刷新"
+
+msgid "Processing"
+msgstr "处理中"
+
+msgid "Completed"
+msgstr "已完成"
+
+msgid "Failed"
+msgstr "失败"
+
+msgid "Total"
+msgstr "总计"
+
+msgid "archives"
+msgstr "档案"
+
+msgid "pages"
+msgstr "页"

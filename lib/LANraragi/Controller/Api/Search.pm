@@ -15,14 +15,6 @@ sub handle_datatables {
     my $req  = $self->req;
     my $logger = get_logger( "Search API", "lanraragi" );
 
-    # Log request method and content type
-    $logger->info("=== Search Request Received ===");
-    $logger->info("Request Method: " . $req->method);
-    $logger->info("Content Type: " . ($req->headers->content_type || "none"));
-    
-    # Log the full URL for debugging
-    $logger->info("Full URL: " . $req->url->to_string);
-
     my $draw   = $req->param('draw');
     my $start  = $req->param('start');
     my $length = $req->param('length');
@@ -41,24 +33,6 @@ sub handle_datatables {
     
     # Always set groupby_tanks to true
     my $grouptanks = "true";
-    
-    $logger->info("Request Parameters:");
-    $logger->info("- draw: " . ($draw || ""));
-    $logger->info("- start: " . ($start || ""));
-    $logger->info("- length: " . ($length || ""));
-    $logger->info("- filter: " . ($filter || ""));
-    $logger->info("- sortindex: " . ($sortindex || ""));
-    $logger->info("- sortorder: " . ($sortorder || ""));
-    $logger->info("- sortkey: " . ($sortkey || ""));
-    $logger->info("- groupby_tanks (forced): true");
-
-    # Log all parameters in a safer way
-    $logger->info("All request parameters:");
-    my $params = $req->params->to_hash;
-    for my $key (sort keys %$params) {
-        my $value = $params->{$key} || "";
-        $logger->info("  $key: $value");
-    }
 
     while ( $req->param("columns[$i][name]") ) {
 
