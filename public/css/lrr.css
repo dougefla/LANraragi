@@ -147,11 +147,33 @@ table thead .sorting_disabled a:after {
 
 .table-options {
   display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
 }
 
-.table-option {
-  margin-left: 8px !important;
-  vertical-align: bottom;
+.table-options > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#selection-mode {
+  align-self: flex-start;
+}
+
+#selection-mode.active {
+  background-color: steelblue;
+  color: white;
+}
+
+#selection-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  background-color: rgba(70, 130, 180, 0.1);
+  border-radius: 4px;
 }
 
 .index-carousel {
@@ -935,4 +957,196 @@ body.infinite-scroll .fullscreen-infinite img {
 .tankoubon-thumb .id4 {
     background-color: #43464E;
     color: #E0E0E0;
+}
+
+.tank-stats {
+    font-size: 0.9em;
+    color: #999;
+    margin-top: 5px;
+}
+
+.tank-stats i {
+    margin-right: 4px;
+}
+
+.tank-stats .ml-2 {
+    margin-left: 8px;
+}
+
+.tankobon-item {
+    cursor: pointer;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    pointer-events: auto !important;
+}
+
+.tankobon-item * {
+    pointer-events: auto !important;
+}
+
+/* Prevent context menu on tankobon items */
+.tankobon-item {
+    -webkit-touch-callout: none !important;
+    -webkit-user-select: none !important;
+    -khtml-user-select: none !important;
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
+    user-select: none !important;
+}
+
+/* Override any context menu styles for tankobon items */
+.tankobon-item.context-menu-active {
+    background-color: transparent !important;
+}
+
+.tankobon-item .context-menu-list {
+    display: none !important;
+}
+
+/* Selection mode styles */
+.selectable {
+    cursor: pointer !important;
+    transition: background-color 0.2s;
+    position: relative;
+}
+
+.selectable:hover {
+    background-color: rgba(70, 130, 180, 0.1);
+}
+
+.selectable.selected {
+    background-color: rgba(70, 130, 180, 0.2) !important;
+    border: 2px solid steelblue !important;
+}
+
+.selectable * {
+    pointer-events: none;
+}
+
+.selectable > div {
+    pointer-events: auto !important;
+}
+
+/* Prevent any navigation in selection mode */
+.selectable a {
+    pointer-events: none !important;
+}
+
+/* Selection checkbox styles */
+.selection-checkbox {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 2;
+    width: 20px;
+    height: 20px;
+    background-color: rgba(255, 255, 255, 0.9);
+    border: 2px solid steelblue;
+    border-radius: 4px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    color: steelblue;
+    pointer-events: none;
+}
+
+/* List mode specific checkbox positioning - match bookmark icon */
+.context-menu .selection-checkbox {
+    position: relative;
+    display: none;
+    top: auto;
+    left: auto;
+    width: auto;
+    height: auto;
+    margin-right: 5px;
+    vertical-align: middle;
+    background: none;
+    border: none;
+}
+
+/* Show checkboxes only in selection mode */
+.selectable .selection-checkbox {
+    display: inline-flex !important;
+}
+
+.context-menu .selection-checkbox i {
+    font-size: inherit;
+}
+
+.context-menu .selection-checkbox.checked i {
+    color: steelblue;
+}
+
+/* Grid mode specific checkbox positioning */
+.id3 .selection-checkbox {
+    top: 10px;
+    left: 10px;
+    width: 24px;
+    height: 24px;
+    z-index: 2;
+    background-color: rgba(255, 255, 255, 0.9);
+    border: 2px solid steelblue;
+    border-radius: 4px;
+}
+
+.selection-checkbox.visible {
+    display: flex !important;
+}
+
+.id3 .selection-checkbox.checked {
+    background-color: steelblue;
+    color: white;
+}
+
+.selection-checkbox i {
+    font-size: 12px;
+}
+
+.id3 .selection-checkbox i {
+    font-size: 14px;
+}
+
+/* Ensure proper positioning in grid mode */
+.id1.selectable {
+    position: relative !important;
+}
+
+/* Override any potential interference from other styles */
+.id3 .selection-checkbox.visible {
+    display: flex !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    z-index: 2 !important;
+}
+
+/* Position relative to allow absolute positioning of children */
+.id3 {
+    position: relative !important;
+}
+
+/* Selection mode styles */
+.selectable.selected {
+    background-color: rgba(70, 130, 180, 0.2) !important;
+}
+
+.selection-checkbox.checked {
+    color: white;
+    background-color: steelblue;
+}
+
+/* List mode specific selection styles */
+.context-menu.selectable {
+    cursor: pointer;
+}
+
+.context-menu.selectable.selected {
+    background-color: rgba(70, 130, 180, 0.2) !important;
+}
+
+.context-menu .selection-checkbox.checked {
+    color: white;
 }

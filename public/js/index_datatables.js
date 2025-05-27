@@ -8,6 +8,10 @@ IndexTable.originalTitle = document.title;
 IndexTable.isComingFromPopstate = false;
 IndexTable.currentSearch = "";
 
+// Add selection mode variables
+IndexTable.isSelectionMode = false;
+IndexTable.selectedArchives = [];
+
 /**
  * Initialize DataTables.
  */
@@ -29,6 +33,24 @@ IndexTable.initializeAll = function () {
             IndexTable.doSearch();
         }
         e.preventDefault();
+    });
+
+    // Add selection mode click handler with high specificity
+    $(document).on("click.selection", ".selectable", function(e) {
+        if (IndexTable.isSelectionMode) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            const id = $(this).attr("id");
+            IndexTable.handleSelection(id);
+            return false;
+        }
+    });
+
+    // Prevent context menu on tankobon items using direct event handler
+    $(document).on("contextmenu", ".tankobon-item, .tankobon-item *", function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
     });
 
     // Catch tag div clicks and do a search instead of reloading the page
@@ -192,29 +214,72 @@ IndexTable.renderTitle = function (data, type) {
         const title = isTankoubon ? data.name : data.title;
         const url = isTankoubon ? `/tankoubon/${id}` : `/reader?id=${id}`;
 
-        // For compact mode, the thumbnail API call enforces no_fallback=true in order to queue Minion jobs for missing thumbnails.
-        // (Since compact mode is the "base", it's always loaded first even if you're in table mode)
-        const bookmarkIcon = !isTankoubon ? LRR.buildBookmarkIconElement(id, "title-bookmark-icon") : '';
+        // Don't allow selecting tankoubons
+        const isSelectable = !isTankoubon && IndexTable.isSelectionMode;
+        
+        // Create checkbox for selection mode
+        const checkbox = isSelectable ? 
+            `<div class="selection-area" style="display: inline-block;">
+                <div class="selection-checkbox ${IndexTable.selectedArchives.includes(id) ? 'checked' : ''}" id="checkbox-${id}">
+                    <i class="fas fa-check"></i>
+                </div>
+            </div>` : '';
+
+        // Check if we're in list view mode
+        if (localStorage.indexViewMode === "0") {
+            const bookmarkIcon = !isTankoubon && !isSelectable ? LRR.buildBookmarkIconElement(id, "title-bookmark-icon") : '';
+            const titleLink = isSelectable ? title : `<a href="${url}" style="text-decoration:none; color:inherit;">${title}</a>`;
+            const isSelected = IndexTable.selectedArchives.includes(id);
+            return `<div id="${id}" class="${isTankoubon ? 'tankobon-item' : 'context-menu'} ${isSelectable ? 'selectable' : ''} ${isSelected ? 'selected' : ''}">
+                        <div style="text-align:left; display:block; text-decoration:none; color:inherit;">
+                            ${bookmarkIcon}
+                            ${checkbox}
+                            ${titleLink}
+                        </div>
+                    </div>`;
+        }
+
+        // For thumbnail view, show the full thumbnail and details
+        const bookmarkIcon = !isTankoubon ? LRR.buildBookmarkIconElement(id, "thumbnail-bookmark-icon") : '';
         const progressDiv = !isTankoubon ? LRR.buildProgressDiv(data) : '';
 
         const thumbnailUrl = isTankoubon ? 
             (data.cover_archive ? 
-                new LRR.apiURL(`/api/archives/${data.cover_archive}/thumbnail`) : 
-                (data.archives && data.archives.length > 0 ? 
-                    new LRR.apiURL(`/api/archives/${data.archives[0]}/thumbnail`) : 
-                    new LRR.apiURL('/img/noThumb.png'))) 
-            : new LRR.apiURL(`/api/archives/${id}/thumbnail?no_fallback=true`);
+                new LRR.apiURL(`/api/archives/${data.cover_archive}/thumbnail`).toString() : 
+                '') : 
+            new LRR.apiURL(`/api/archives/${id}/thumbnail`).toString();
 
-        return `${progressDiv}${bookmarkIcon}<a class="context-menu" id="${id}" onmouseover="IndexTable.buildImageTooltip(this)" href="${url}"> 
-                    ${LRR.encodeHTML(title)}
-                </a>
-                <div class="caption" style="display: none;">
-                    <img style="height:300px" src="${thumbnailUrl}" 
-                         onerror="this.src='${new LRR.apiURL('/img/noThumb.png')}'">
-                </div>`;
+        const tankStats = isTankoubon ? 
+            `<div class="tank-stats">
+                <i class="fas fa-book"></i> ${data.archives ? data.archives.length : 0} Archives
+                <i class="fas fa-file ml-2"></i> ${data.pagecount || 0} Pages
+            </div>` : '';
+
+        // In selection mode, use a div with onclick handler
+        const containerTag = 'div';
+        const containerAttrs = isSelectable ?
+            `style="text-align:center; position:relative; display:block; text-decoration:none; color:inherit; cursor: pointer;" onclick="event.preventDefault(); event.stopPropagation(); IndexTable.handleSelection('${id}'); return false;"` :
+            `style="text-align:center; position:relative; display:block; text-decoration:none; color:inherit;" onclick="window.location.href='${url}'"`;
+
+        return `
+            <div id="${id}" class="${isTankoubon ? 'tankobon-item' : 'context-menu'} ${isSelectable ? 'selectable' : ''}">
+                <${containerTag} ${containerAttrs}>
+                    <div class="id3" ${isTankoubon ? 'style="background: rgba(70, 130, 180, 0.2);"' : ''}>
+                        <a href="${url}" title="${title}">
+                            <img src="${thumbnailUrl}" title="${title}" />
+                        </a>
+                        ${bookmarkIcon}
+                        ${checkbox}
+                    </div>
+                    <div class="id4">
+                        ${title}
+                        ${progressDiv}
+                        ${tankStats}
+                    </div>
+                </${containerTag}>
+            </div>`;
     }
-
-    return data.title || data.name;
+    return data.title;
 };
 
 /**
@@ -430,4 +495,217 @@ IndexTable.buildTagTooltip = function (target) {
     }).show(); // Call show() so that the tooltip shows now
 
     $(target).attr("onmouseover", "");
+};
+
+/**
+ * Toggle selection mode on/off
+ */
+IndexTable.toggleSelectionMode = function() {
+    // Don't allow enabling selection mode in thumbnail view
+    if (localStorage.indexViewMode === "1") {
+        return;
+    }
+
+    IndexTable.isSelectionMode = !IndexTable.isSelectionMode;
+    
+    // Update button appearance
+    const button = $("#selection-mode");
+    button.toggleClass("active", IndexTable.isSelectionMode);
+    
+    // Show/hide selection toolbar
+    $("#selection-toolbar").toggle(IndexTable.isSelectionMode);
+    
+    // Clear selected archives when turning off selection mode
+    if (!IndexTable.isSelectionMode) {
+        IndexTable.selectedArchives = [];
+        $(".selectable").removeClass("selected");
+        $(".selection-checkbox").removeClass("checked");
+    }
+    
+    // Force a redraw of the table to update the thumbnails
+    IndexTable.dataTable.draw(false);
+};
+
+/**
+ * Handle selection of an archive
+ */
+IndexTable.handleSelection = function(id) {
+    if (!IndexTable.isSelectionMode) return;
+    
+    const index = IndexTable.selectedArchives.indexOf(id);
+    const element = $(`#${id}`);
+    const checkbox = $(`#checkbox-${id}`);
+    
+    if (index === -1) {
+        // Add to selection
+        IndexTable.selectedArchives.push(id);
+        element.addClass("selected");
+        checkbox.addClass("checked");
+    } else {
+        // Remove from selection
+        IndexTable.selectedArchives.splice(index, 1);
+        element.removeClass("selected");
+        checkbox.removeClass("checked");
+    }
+    
+    // Update selected count
+    $("#selected-count").text(IndexTable.selectedArchives.length);
+    
+    // Enable/disable action buttons
+    const hasSelection = IndexTable.selectedArchives.length > 0;
+    $("#add-to-tankoubon").prop("disabled", !hasSelection);
+    $("#delete-selected").prop("disabled", !hasSelection);
+};
+
+/**
+ * Add selected archives to tankoubon
+ */
+IndexTable.addSelectedToTankoubon = function() {
+    if (IndexTable.selectedArchives.length === 0) return;
+
+    // Get list of existing tankoubons
+    Server.callAPI(
+        "api/tankoubons",
+        "GET",
+        null,
+        "Error loading tankoubons",
+        function(tankoubons) {
+            let options = '<option value="new">Create New Tankoubon</option>';
+            options += '<option disabled>──────────</option>';
+            tankoubons.forEach(tank => {
+                options += `<option value="${tank.id}">${tank.name}</option>`;
+            });
+
+            LRR.showPopUp({
+                title: "Add to Tankoubon",
+                html: `<div>
+                        <p>Select a tankoubon or create a new one:</p>
+                        <select id="tankoubon-select" class="favtag-btn" style="width: 100%; margin-bottom: 10px;">
+                            ${options}
+                        </select>
+                        <div id="new-tankoubon-name">
+                            <input type="text" id="new-name" class="favtag-btn" placeholder="Enter new tankoubon name" style="width: 100%;">
+                        </div>
+                    </div>`,
+                showCancelButton: true,
+                confirmButtonText: "Add",
+                didOpen: () => {
+                    // Show/hide new tankoubon name input based on selection
+                    $("#tankoubon-select").on("change", function() {
+                        $("#new-tankoubon-name").toggle($(this).val() === "new");
+                    });
+                    // Show input field immediately if Create New Tankoubon is selected
+                    $("#new-tankoubon-name").toggle($("#tankoubon-select").val() === "new");
+                },
+                preConfirm: () => {
+                    const selectedValue = $("#tankoubon-select").val();
+                    if (selectedValue === "new") {
+                        const newName = $("#new-name").val()?.trim();
+                        if (!newName) {
+                            Swal.showValidationMessage("Please enter a name for the new tankoubon");
+                            return false;
+                        }
+                        return { isNew: true, name: newName };
+                    }
+                    return { isNew: false, tankId: selectedValue };
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    if (result.value.isNew) {
+                        // Create new tankoubon first using jQuery ajax directly
+                        $.ajax({
+                            url: "api/tankoubons",
+                            type: "PUT",
+                            data: { name: result.value.name },
+                            success: function(response) {
+                                if (response.success) {
+                                    IndexTable.addArchivesToTankoubon(response.tankoubon_id);
+                                } else {
+                                    LRR.showErrorToast("Error creating tankoubon: " + response.error);
+                                }
+                            },
+                            error: function(xhr, status, error) {
+                                LRR.showErrorToast("Error creating tankoubon: " + error);
+                            }
+                        });
+                    } else {
+                        IndexTable.addArchivesToTankoubon(result.value.tankId);
+                    }
+                }
+            });
+        }
+    );
+};
+
+/**
+ * Add archives to specified tankoubon
+ */
+IndexTable.addArchivesToTankoubon = function(tankId) {
+    let promises = IndexTable.selectedArchives.map(archiveId => {
+        return $.ajax({
+            url: `api/tankoubons/${tankId}/archives/${archiveId}`,
+            type: "PUT"
+        });
+    });
+
+    // After all archives are added, set the first one as cover
+    Promise.all(promises).then(() => {
+        // Set the first archive as cover
+        $.ajax({
+            url: `api/tankoubons/${tankId}`,
+            type: "PUT",
+            contentType: "application/json",
+            data: JSON.stringify({
+                cover_archive: IndexTable.selectedArchives[0]
+            }),
+            success: function() {
+                LRR.toast({
+                    heading: "Success!",
+                    text: `Added ${IndexTable.selectedArchives.length} archives to tankoubon`,
+                    icon: "success"
+                });
+                IndexTable.toggleSelectionMode();
+                IndexTable.dataTable.draw();
+            }
+        });
+    }).catch(error => {
+        LRR.showErrorToast("Error adding archives to tankoubon: " + error);
+    });
+};
+
+/**
+ * Delete selected archives
+ */
+IndexTable.deleteSelected = function() {
+    if (IndexTable.selectedArchives.length === 0) return;
+
+    LRR.showPopUp({
+        title: "Delete Archives",
+        text: `Are you sure you want to delete ${IndexTable.selectedArchives.length} selected archives?`,
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "Delete",
+        confirmButtonColor: "#dc3545"
+    }).then((result) => {
+        if (result.isConfirmed) {
+            let promises = IndexTable.selectedArchives.map(archiveId => {
+                return $.ajax({
+                    url: `api/archives/${archiveId}`,
+                    type: "DELETE"
+                });
+            });
+
+            Promise.all(promises).then(() => {
+                LRR.toast({
+                    heading: "Success!",
+                    text: `Deleted ${IndexTable.selectedArchives.length} archives`,
+                    icon: "success"
+                });
+                IndexTable.toggleSelectionMode();
+                IndexTable.dataTable.draw();
+            }).catch(error => {
+                LRR.showErrorToast("Error deleting archives: " + error);
+            });
+        }
+    });
 };

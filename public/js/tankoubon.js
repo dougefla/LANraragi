@@ -317,6 +317,8 @@ window.Tankoubon = {
                         text: data.message,
                         icon: "success"
                     });
+                    // Update tankobon tags after adding archive
+                    TankoubonView.updateTankoubonTags(tankId);
                 } else {
                     LRR.showErrorToast("Error adding archive: " + data.error);
                 }

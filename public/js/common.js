@@ -300,8 +300,16 @@ LRR.buildThumbnailDiv = function (data, tagTooltip = true) {
     const title = isTankoubon ? data.name : data.title;
     const tags = isTankoubon ? (data.tags || '') : data.tags;
 
+    // Check if we're in selection mode
+    const isSelectable = !isTankoubon && window.IndexTable?.isSelectionMode;
+    const checkbox = isSelectable ? 
+        `<div class="selection-checkbox visible" id="checkbox-${id}">
+            <i class="fas fa-check"></i>
+         </div>` : '';
+
     // Don't enforce no_fallback=true here, we don't want those divs to trigger Minion jobs 
-    return `<div class="id1 context-menu swiper-slide ${isTankoubon ? 'tankoubon-thumb' : ''}" id="${id}">
+    return `<div class="id1 ${isTankoubon ? 'tankobon-item' : 'context-menu'} swiper-slide ${isTankoubon ? 'tankoubon-thumb' : ''} ${isSelectable ? 'selectable' : ''}" id="${id}" ${isSelectable ? `onclick="event.preventDefault(); event.stopPropagation(); IndexTable.handleSelection('${id}'); return false;"` : ''}>
+                ${checkbox}
                 <div class="id2">
                     ${!isTankoubon ? LRR.buildProgressDiv(data) : ''}
                     <a href="${reader_url}" title="${LRR.encodeHTML(title)}">${LRR.encodeHTML(title)}</a>

@@ -190,10 +190,18 @@ sub delete_tankoubon ($tank_id) {
     }
 
     if ( $redis->exists($tank_id) ) {
+        # Get all archives in the tankobon before deleting it
+        my @archives = $redis->zrangebyscore( $tank_id, 1, "+inf" );
+
         $redis->del($tank_id);
 
         # The ID will remain in LRR_TITLES until the next stats compute, but this'll prevent it from appearing in search.
         $redis_search->srem( "LRR_TANKGROUPED", $tank_id );
+
+        # Make all contained archives visible in search again
+        foreach my $arc_id (@archives) {
+            $redis_search->sadd( "LRR_TANKGROUPED", $arc_id );
+        }
 
         $redis->quit;
         $redis_search->quit;

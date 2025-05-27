@@ -53,6 +53,12 @@
             margin-bottom: 20px;
         }
 
+        .tag-list {
+            line-height: 1.6;
+            color: #ccc;
+            word-wrap: break-word;
+        }
+
         .tankoubon-actions {
             display: flex;
             gap: 10px;
@@ -243,6 +249,12 @@
                 <h2 class='tankoubon-title'>[% tank.name %]</h2>
                 <div class='tankoubon-stats'>
                     <div>[% tank.archives.size %] Archives</div>
+                    [% IF tank.tags %]
+                    <div style="margin-top: 10px;">
+                        <span style="color: #999;">Tags:</span>
+                        <div class="tag-list" style="margin-top: 5px;">[% tank.tags %]</div>
+                    </div>
+                    [% END %]
                     [% IF tank.summary %]
                     <div style="margin-top: 10px;">[% tank.summary %]</div>
                     [% END %]

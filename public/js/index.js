@@ -177,6 +177,13 @@ Index.toggleBookmarkStatusByIcon = function (e) {
 };
 
 Index.toggleMode = function () {
+    // If switching to thumbnail mode, turn off selection mode
+    if (localStorage.indexViewMode === "0") {
+        if (IndexTable.isSelectionMode) {
+            IndexTable.toggleSelectionMode();
+        }
+    }
+    
     localStorage.indexViewMode = (localStorage.indexViewMode === "1") ? "0" : "1";
     IndexTable.dataTable.draw();
 };
@@ -318,16 +325,20 @@ Index.updateTableControls = function (currentSort, currentOrder, totalPages, cur
     $("#order-sortby")[0].classList.remove("fa-sort-alpha-down", "fa-sort-alpha-up");
     $("#order-sortby")[0].classList.add(currentOrder === "asc" ? "fa-sort-alpha-down" : "fa-sort-alpha-up");
 
+    // Update table controls based on view mode
     if (localStorage.indexViewMode === "1") {
-        $(".thumbnail-options").show();
-        $(".thumbnail-toggle").show();
         $(".compact-options").hide();
-        $(".compact-toggle").hide();
-    } else {
-        $(".thumbnail-options").hide();
-        $(".thumbnail-toggle").hide();
-        $(".compact-options").show();
+        $(".thumbnail-options").show();
         $(".compact-toggle").show();
+        $(".thumbnail-toggle").hide();
+        $("#selection-mode").hide(); // Hide selection mode in thumbnail view
+        $("#selection-toolbar").hide();
+    } else {
+        $(".compact-options").show();
+        $(".thumbnail-options").hide();
+        $(".compact-toggle").hide();
+        $(".thumbnail-toggle").show();
+        $("#selection-mode").show(); // Show selection mode in list view
     }
 
     // Page selector

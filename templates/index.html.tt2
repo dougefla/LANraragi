@@ -136,6 +136,24 @@
 			</ul>
 
 			<div class="table-options" style="display: none;">
+				<!-- Add selection mode button -->
+				<button id="selection-mode" class="stdbtn" onclick="IndexTable.toggleSelectionMode()">
+					<i class="fas fa-check-square"></i> [% c.lh("Select Mode") %]
+				</button>
+
+				<!-- Add selection toolbar -->
+				<div id="selection-toolbar" style="display: none; margin-top: 10px;">
+					<span style="margin-right: 10px;">
+						<i class="fas fa-check-square"></i> <span id="selected-count">0</span> selected
+					</span>
+					<button id="add-to-tankoubon" class="stdbtn" onclick="IndexTable.addSelectedToTankoubon()" disabled>
+						<i class="fas fa-book"></i> [% c.lh("Add to Tankoubon") %]
+					</button>
+					<button id="delete-selected" class="stdbtn" onclick="IndexTable.deleteSelected()" disabled style="background-color: #dc3545;">
+						<i class="fas fa-trash"></i> [% c.lh("Delete Selected") %]
+					</button>
+				</div>
+
 				<div class="thumbnail-options">[% c.lh("Sort by:") %]
 					<select class="favtag-btn" id="namespace-sortby">
 						<option selected value="title">[% c.lh("Title") %]</option>
@@ -151,6 +169,7 @@
 					<input id="group-tanks" class="fa table-option" type="checkbox" checked>
 					<label for="group-tanks" style="vertical-align: middle; padding-top:6px">[% c.lh("Group Tankoubon") %]</label>
 				</div>
+
 				<div class="compact-options">[% c.lh("Columns:") %]
 					<select class="favtag-btn" id="columnCount">
 						<script>  
@@ -223,7 +242,7 @@
 
 			// Initialize context menu
 			$.contextMenu({
-				selector: '.context-menu',
+				selector: '.context-menu:not(.tankobon-item)',
 				build: ($trigger, e) => {
 					const archiveId = $trigger.attr("id");
 					return {
@@ -294,6 +313,8 @@
 																						text: data.message,
 																						icon: "success"
 																					});
+																					// Update tankobon tags after adding archive
+																					TankoubonView.updateTankoubonTags(result.value);
 																				} else {
 																					LRR.showErrorToast("Error adding archive: " + data.error);
 																				}
@@ -318,6 +339,8 @@
 																	text: data.message,
 																	icon: "success"
 																});
+																// Update tankobon tags after adding archive
+																TankoubonView.updateTankoubonTags(result.value);
 															} else {
 																LRR.showErrorToast("Error adding archive: " + data.error);
 															}

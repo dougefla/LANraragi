@@ -161,6 +161,9 @@ window.TankoubonView = {
                             <label>Name:</label><br>
                             <input type="text" id="tank-name" class="favtag-btn" value="${tank.name}" style="width: 100%; margin-bottom: 15px;">
                             
+                            <label>Tags:</label><br>
+                            <input type="text" id="tank-tags" class="favtag-btn" value="${tank.tags || ''}" style="width: 100%; margin-bottom: 15px;">
+                            
                             <label>Summary:</label><br>
                             <textarea id="tank-summary" class="favtag-btn" style="width: 100%; height: 100px; margin-bottom: 15px;">${tank.summary || ''}</textarea>
                         </div>
@@ -169,8 +172,11 @@ window.TankoubonView = {
                     confirmButtonText: "Save",
                     preConfirm: () => {
                         return {
-                            name: $('#tank-name').val(),
-                            summary: $('#tank-summary').val()
+                            metadata: {
+                                name: $('#tank-name').val(),
+                                tags: $('#tank-tags').val(),
+                                summary: $('#tank-summary').val()
+                            }
                         };
                     }
                 }).then((result) => {
@@ -419,6 +425,77 @@ window.TankoubonView = {
     },
 
     /**
+     * Update tankobon tags by aggregating tags from all its archives
+     */
+    updateTankoubonTags: function(tankId) {
+        $.ajax({
+            url: "../api/tankoubons/" + tankId,
+            type: "GET",
+            success: function(tank) {
+                if (!tank.archives || tank.archives.length === 0) {
+                    // If no archives, clear the tags
+                    $.ajax({
+                        url: "../api/tankoubons/" + tankId,
+                        type: "PUT",
+                        contentType: "application/json",
+                        data: JSON.stringify({
+                            metadata: {
+                                tags: ""
+                            }
+                        })
+                    });
+                    return;
+                }
+
+                // Get all archive details to aggregate their tags
+                const archivePromises = tank.archives.map(archiveId =>
+                    $.ajax({
+                        url: "../api/archives/" + archiveId,
+                        type: "GET"
+                    })
+                );
+
+                Promise.all(archivePromises).then(archives => {
+                    // Aggregate all unique tags
+                    const tagSet = new Set();
+                    archives.forEach(archive => {
+                        if (archive.tags) {
+                            const tags = archive.tags.split(',').map(tag => tag.trim());
+                            tags.forEach(tag => tagSet.add(tag));
+                        }
+                    });
+
+                    // Convert Set to comma-separated string
+                    const aggregatedTags = Array.from(tagSet).join(', ');
+
+                    // Update tankobon with aggregated tags
+                    $.ajax({
+                        url: "../api/tankoubons/" + tankId,
+                        type: "PUT",
+                        contentType: "application/json",
+                        data: JSON.stringify({
+                            metadata: {
+                                tags: aggregatedTags
+                            }
+                        }),
+                        success: function(data) {
+                            if (!data.success) {
+                                LRR.showErrorToast("Error updating tankobon tags: " + data.error);
+                            }
+                        },
+                        error: function(xhr, status, error) {
+                            LRR.showErrorToast("Error updating tankobon tags: " + error);
+                        }
+                    });
+                });
+            },
+            error: function(xhr, status, error) {
+                LRR.showErrorToast("Error loading tankobon: " + error);
+            }
+        });
+    },
+
+    /**
      * Remove an archive from the tankoubon
      */
     removeArchive: function (tankId, archiveId) {
@@ -441,6 +518,8 @@ window.TankoubonView = {
                                 text: data.message,
                                 icon: "success"
                             });
+                            // Update tags after removing archive
+                            TankoubonView.updateTankoubonTags(tankId);
                             // Close the dialog and reload the page to update the archive list
                             window.location.reload();
                         } else {
