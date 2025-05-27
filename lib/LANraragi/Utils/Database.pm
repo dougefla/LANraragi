@@ -14,7 +14,7 @@ use File::Basename;
 use Redis;
 use Cwd;
 use Unicode::Normalize;
-use List::Util qw(max);
+use List::Util qw(max sum);
 use List::MoreUtils qw(uniq);
 
 use LANraragi::Utils::Generic qw(flat);
@@ -260,27 +260,11 @@ sub build_json ( $id, %hash ) {
 sub build_tank_json($id) {
     my %tank = LANraragi::Model::Tankoubon::get_tankoubon($id, 1);
 
-    # Aggregate data of all archives in the tank 
-    my $aggregate_tags = "";
-    my $aggregate_names = "";
-    my $aggregate_isnew = 0;
-    my $aggregate_progress = 0;
-    my $aggregate_pagecount = 0;
-    my $latest_readtime = 0;
-    my $aggregate_size = 0;
-
-    foreach my $archive_info (@{$tank{full_data}}) {
-        $aggregate_tags .= %$archive_info{tags} . ",";
-        $aggregate_names .= %$archive_info{title} . ",";
-        $aggregate_isnew = $aggregate_isnew || %$archive_info{isnew};
-        $aggregate_progress = $aggregate_progress + %$archive_info{progress};
-        $aggregate_pagecount = $aggregate_pagecount + %$archive_info{pagecount};
-        $aggregate_size = $aggregate_size + %$archive_info{size};
-        $latest_readtime = max($latest_readtime, %$archive_info{lastreadtime});
+    # Use only the first archive's tags
+    my $first_archive_tags = "";
+    if ($tank{full_data} && @{$tank{full_data}}[0]) {
+        $first_archive_tags = ${@{$tank{full_data}}[0]}{tags};
     }
-
-    chop $aggregate_tags;
-    chop $aggregate_names;
 
     # Ensure the tank name is properly decoded from Redis encoding
     my $tank_name = redis_decode($tank{name});
@@ -290,14 +274,14 @@ sub build_tank_json($id) {
         title       => $tank_name,
         name        => $tank_name,  # Add name field as well for consistency
         filename    => $tank_name,  # Use tank name as filename for display
-        tags         => $aggregate_tags,
-        summary      => "Tankoubon containing: $aggregate_names",
-        isnew        => $aggregate_isnew ? $aggregate_isnew : "false",
+        tags         => $first_archive_tags,
+        summary      => "Tankoubon containing: " . join(", ", map { ${$_}{title} } @{$tank{full_data}}),
+        isnew        => (@{$tank{full_data}} && ${@{$tank{full_data}}[0]}{isnew}) ? "true" : "false",
         extension    => ".tank",
-        progress     => $aggregate_progress,
-        pagecount    => $aggregate_pagecount,
-        lastreadtime => $latest_readtime,
-        size         => $aggregate_size,
+        progress     => 0,  # Could be calculated if needed
+        pagecount    => sum(map { ${$_}{pagecount} } @{$tank{full_data}}),
+        lastreadtime => max(map { ${$_}{lastreadtime} } @{$tank{full_data}}),
+        size         => sum(map { ${$_}{size} } @{$tank{full_data}}),
         cover_archive => $tank{cover_archive}
     };
 

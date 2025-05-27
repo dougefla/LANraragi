@@ -205,7 +205,7 @@ window.Tankoubon = {
                     }
                 }).then((result) => {
                     if (result.isConfirmed) {
-                        this.updateTankoubon(tankId, result.value);
+                        Tankoubon.updateTankoubon(tankId, result.value);
                     }
                 });
             },
@@ -248,7 +248,12 @@ window.Tankoubon = {
         $.ajax({
             url: "api/tankoubons/" + tankId,
             type: "PUT",
-            data: { name: name },
+            contentType: "application/json",
+            data: JSON.stringify({
+                metadata: {
+                    name: name
+                }
+            }),
             success: function (data) {
                 if (data.success) {
                     LRR.toast({

@@ -425,7 +425,7 @@ window.TankoubonView = {
     },
 
     /**
-     * Update tankobon tags by aggregating tags from all its archives
+     * Update tankobon tags by using the first archive's tags
      */
     updateTankoubonTags: function(tankId) {
         $.ajax({
@@ -447,46 +447,34 @@ window.TankoubonView = {
                     return;
                 }
 
-                // Get all archive details to aggregate their tags
-                const archivePromises = tank.archives.map(archiveId =>
-                    $.ajax({
-                        url: "../api/archives/" + archiveId,
-                        type: "GET"
-                    })
-                );
-
-                Promise.all(archivePromises).then(archives => {
-                    // Aggregate all unique tags
-                    const tagSet = new Set();
-                    archives.forEach(archive => {
-                        if (archive.tags) {
-                            const tags = archive.tags.split(',').map(tag => tag.trim());
-                            tags.forEach(tag => tagSet.add(tag));
-                        }
-                    });
-
-                    // Convert Set to comma-separated string
-                    const aggregatedTags = Array.from(tagSet).join(', ');
-
-                    // Update tankobon with aggregated tags
-                    $.ajax({
-                        url: "../api/tankoubons/" + tankId,
-                        type: "PUT",
-                        contentType: "application/json",
-                        data: JSON.stringify({
-                            metadata: {
-                                tags: aggregatedTags
+                // Get only the first archive's details
+                $.ajax({
+                    url: "../api/archives/" + tank.archives[0],
+                    type: "GET",
+                    success: function(archive) {
+                        // Update tankobon with first archive's tags
+                        $.ajax({
+                            url: "../api/tankoubons/" + tankId,
+                            type: "PUT",
+                            contentType: "application/json",
+                            data: JSON.stringify({
+                                metadata: {
+                                    tags: archive.tags || ""
+                                }
+                            }),
+                            success: function(data) {
+                                if (!data.success) {
+                                    LRR.showErrorToast("Error updating tankobon tags: " + data.error);
+                                }
+                            },
+                            error: function(xhr, status, error) {
+                                LRR.showErrorToast("Error updating tankobon tags: " + error);
                             }
-                        }),
-                        success: function(data) {
-                            if (!data.success) {
-                                LRR.showErrorToast("Error updating tankobon tags: " + data.error);
-                            }
-                        },
-                        error: function(xhr, status, error) {
-                            LRR.showErrorToast("Error updating tankobon tags: " + error);
-                        }
-                    });
+                        });
+                    },
+                    error: function(xhr, status, error) {
+                        LRR.showErrorToast("Error loading archive details: " + error);
+                    }
                 });
             },
             error: function(xhr, status, error) {

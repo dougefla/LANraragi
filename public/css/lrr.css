@@ -951,7 +951,6 @@ body.infinite-scroll .fullscreen-infinite img {
 
 .tankoubon-thumb .id3 {
     background-color: #43464E;
-    border: 1px solid #666;
 }
 
 .tankoubon-thumb .id4 {
@@ -986,25 +985,6 @@ body.infinite-scroll .fullscreen-infinite img {
 
 .tankobon-item * {
     pointer-events: auto !important;
-}
-
-/* Prevent context menu on tankobon items */
-.tankobon-item {
-    -webkit-touch-callout: none !important;
-    -webkit-user-select: none !important;
-    -khtml-user-select: none !important;
-    -moz-user-select: none !important;
-    -ms-user-select: none !important;
-    user-select: none !important;
-}
-
-/* Override any context menu styles for tankobon items */
-.tankobon-item.context-menu-active {
-    background-color: transparent !important;
-}
-
-.tankobon-item .context-menu-list {
-    display: none !important;
 }
 
 /* Selection mode styles */
@@ -1149,4 +1129,24 @@ body.infinite-scroll .fullscreen-infinite img {
 
 .context-menu .selection-checkbox.checked {
     color: white;
+}
+
+/* Tankoubon Thumbnail Styles */
+.id1.tankoubon-thumb .id3 {
+    position: relative;
+}
+
+.id1.tankoubon-thumb .id3::before {
+    content: '\f02d';  /* Book icon */
+    font-family: 'Font Awesome 5 Free';
+    font-weight: 900;
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 1.2em;
+    color: #fff;
+    background: rgba(0, 0, 0, 0.5);
+    padding: 5px;
+    border-radius: 50%;
+    z-index: 1;
 }

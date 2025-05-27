@@ -240,11 +240,40 @@
 			[% END %]
 			[% END %]
 
-			// Initialize context menu
+			// Initialize context menu for regular archives
 			$.contextMenu({
-				selector: '.context-menu:not(.tankobon-item)',
+				selector: '.context-menu',
 				build: ($trigger, e) => {
 					const archiveId = $trigger.attr("id");
+					const isTankoubon = archiveId.startsWith('TANK_');
+
+					// If it's a tankoubon, use the tankoubon context menu
+					if (isTankoubon) {
+						return {
+							callback: function(key, options) {
+								switch(key) {
+									case "view":
+										window.location.href = `./tankoubon/${archiveId}`;
+										break;
+									case "edit":
+										Tankoubon.showEditTankoubonDialog(archiveId);
+										break;
+									case "delete":
+										Tankoubon.deleteTankoubon(archiveId);
+										break;
+								}
+							},
+							items: {
+								"view": {name: "[% c.lh('View Details') %]", icon: "fas fa-book"},
+								[% IF userlogged %]
+								"edit": {name: "[% c.lh('Edit Name') %]", icon: "fas fa-edit"},
+								"delete": {name: "[% c.lh('Delete') %]", icon: "fas fa-trash"}
+								[% END %]
+							}
+						};
+					}
+
+					// Regular archive context menu
 					return {
 						callback: function (key, options) {
 							if (key === "addtotankoubon") {
@@ -294,32 +323,16 @@
 																return I18N.MissingTankoubonName;
 															}
 														}
-													}).then((createResult) => {
-														if (createResult.isConfirmed) {
+													}).then((result) => {
+														if (result.isConfirmed) {
 															// Create tankoubon and add archive to it
 															$.ajax({
 																url: "api/tankoubons",
 																type: "PUT",
-																data: { name: createResult.value },
+																data: { name: result.value },
 																success: function (data) {
 																	if (data.success) {
-																		$.ajax({
-																			url: "api/tankoubons/" + data.tankoubon_id + "/archives/" + archiveId,
-																			type: "PUT",
-																			success: function (data) {
-																				if (data.success) {
-																					LRR.toast({
-																						heading: "Success!",
-																						text: data.message,
-																						icon: "success"
-																					});
-																					// Update tankobon tags after adding archive
-																					TankoubonView.updateTankoubonTags(result.value);
-																				} else {
-																					LRR.showErrorToast("Error adding archive: " + data.error);
-																				}
-																			}
-																		});
+																		Tankoubon.addArchive(data.tankoubon_id, archiveId);
 																	} else {
 																		LRR.showErrorToast("Error creating tankoubon: " + data.error);
 																	}
@@ -381,7 +394,7 @@
 							}
 							[% END %]
 						}
-					}
+					};
 				}
 			});
 		});

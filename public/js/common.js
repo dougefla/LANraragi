@@ -308,7 +308,7 @@ LRR.buildThumbnailDiv = function (data, tagTooltip = true) {
          </div>` : '';
 
     // Don't enforce no_fallback=true here, we don't want those divs to trigger Minion jobs 
-    return `<div class="id1 ${isTankoubon ? 'tankobon-item' : 'context-menu'} swiper-slide ${isTankoubon ? 'tankoubon-thumb' : ''} ${isSelectable ? 'selectable' : ''}" id="${id}" ${isSelectable ? `onclick="event.preventDefault(); event.stopPropagation(); IndexTable.handleSelection('${id}'); return false;"` : ''}>
+    return `<div class="id1 context-menu ${isTankoubon ? 'tankoubon-thumb tankobon-item' : ''} swiper-slide ${isSelectable ? 'selectable' : ''}" id="${id}" ${isSelectable ? `onclick="event.preventDefault(); event.stopPropagation(); IndexTable.handleSelection('${id}'); return false;"` : ''}>
                 ${checkbox}
                 <div class="id2">
                     ${!isTankoubon ? LRR.buildProgressDiv(data) : ''}

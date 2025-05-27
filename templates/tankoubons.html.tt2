@@ -210,6 +210,8 @@
             padding-top: 3px;
             vertical-align: top;
             min-height: 335px;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
 
         .tankoubon-card:hover {
@@ -319,6 +321,15 @@
 
         .tankoubon-item.context-menu-active {
             background: #363636;
+        }
+
+        .table-list tr {
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .table-list tr:hover {
+            background-color: #4a4e57 !important;
         }
     </style>
 

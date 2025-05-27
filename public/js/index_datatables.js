@@ -46,13 +46,6 @@ IndexTable.initializeAll = function () {
         }
     });
 
-    // Prevent context menu on tankobon items using direct event handler
-    $(document).on("contextmenu", ".tankobon-item, .tankobon-item *", function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        return false;
-    });
-
     // Catch tag div clicks and do a search instead of reloading the page
     $(document).on("click.gt", ".gt", (e) => {
         e.preventDefault();
@@ -60,11 +53,10 @@ IndexTable.initializeAll = function () {
         IndexTable.doSearch();
     });
 
-    // Add a listen event to window.popstate to update the search accordingly
-    // if the user goes back using browser history
-    $(window).on("popstate", () => {
-        IndexTable.isComingFromPopstate = true;
-        IndexTable.consumeURLParameters();
+    // Context menu handling for both archives and tankoubons
+    $(document).on("contextmenu", ".context-menu", function(e) {
+        // Let the jQuery contextMenu plugin handle it
+        return true;
     });
 
     // Clear searchbar cache
@@ -115,10 +107,16 @@ IndexTable.initializeAll = function () {
                         ${I18N.IndexNoArcsFound(new LRR.apiURL("/upload"))}</h1><br/>`,
             processing: `<div id="progress" class="indeterminate"><div class="bar-container"><div class="bar" style=" width: 80%; "></div></div></div>`,
         },
-        preDrawCallback: IndexTable.initializeThumbView, // callbacks for thumbnail view
+        preDrawCallback: IndexTable.initializeThumbView,
         drawCallback: IndexTable.drawCallback,
         rowCallback: IndexTable.buildThumbnailCell,
         columns: columns,
+    });
+
+    // Add a listen event to window.popstate to update the search accordingly
+    $(window).on("popstate", () => {
+        IndexTable.isComingFromPopstate = true;
+        IndexTable.consumeURLParameters();
     });
 
     console.log("DataTables initialized, consuming URL parameters...");
@@ -262,7 +260,7 @@ IndexTable.renderTitle = function (data, type) {
             `style="text-align:center; position:relative; display:block; text-decoration:none; color:inherit;" onclick="window.location.href='${url}'"`;
 
         return `
-            <div id="${id}" class="${isTankoubon ? 'tankobon-item' : 'context-menu'} ${isSelectable ? 'selectable' : ''}">
+            <div id="${id}" class="context-menu ${isTankoubon ? 'tankobon-item' : ''} ${isSelectable ? 'selectable' : ''}">
                 <${containerTag} ${containerAttrs}>
                     <div class="id3" ${isTankoubon ? 'style="background: rgba(70, 130, 180, 0.2);"' : ''}>
                         <a href="${url}" title="${title}">
