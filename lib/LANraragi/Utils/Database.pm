@@ -197,13 +197,13 @@ sub get_archive_json_multi (@ids) {
 
         # If we got no results for one ID/hgetall, skip it.
         next unless ( $results[$i] );
-        my %hash = @{ $results[$i] };
         my $id   = $ids[$i];
-        my $arcdata; 
+        my $arcdata;
 
         if ($id =~ /^TANK/) {
             $arcdata = build_tank_json($id);
         } else {
+            my %hash = @{ $results[$i] };
             $arcdata = build_json( $id, %hash );
         }
 
