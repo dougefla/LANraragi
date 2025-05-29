@@ -72,7 +72,7 @@ window.TankoubonView = {
                             html = "<div class='archive-grid'>";
                             archives.forEach((archive, index) => {
                                 html += `
-                                    <div class='archive-card' onclick='window.location.href="../reader?id=${archive.arcid}"'>
+                                    <div class='archive-card' onclick='window.location.href="../reader?id=${archive.arcid}&tank=${tankId}"'>
                                         <img src="../api/archives/${archive.arcid}/thumbnail" alt="Thumbnail" />
                                         <div class='title'>${archive.title}</div>
                                         ${TankoubonView.getProgressBadge(archive)}
@@ -86,7 +86,7 @@ window.TankoubonView = {
                             html = "<div class='archive-list'>";
                             archives.forEach((archive, index) => {
                                 html += `
-                                    <div class='archive-list-item' onclick='window.location.href="../reader?id=${archive.arcid}"'>
+                                    <div class='archive-list-item' onclick='window.location.href="../reader?id=${archive.arcid}&tank=${tankId}"'>
                                         <img src="../api/archives/${archive.arcid}/thumbnail" alt="Thumbnail" />
                                         <div class='info'>
                                             <div class='title'>${archive.title}</div>
@@ -107,7 +107,7 @@ window.TankoubonView = {
                                 html += `
                                     <div class='archive-card'>
                                         <div class='title'>${archive.title}</div>
-                                        <a href="../reader?id=${archive.arcid}">
+                                        <a href="../reader?id=${archive.arcid}&tank=${tankId}">
                                             <img src="../api/archives/${archive.arcid}/thumbnail" alt="Thumbnail" />
                                         </a>
                                     </div>
@@ -610,7 +610,8 @@ window.TankoubonView = {
      */
     jumpToEpisode: function(arcid) {
         if (!arcid) return;
-        window.location.href = "../reader?id=" + arcid;
+        const tankId = window.location.pathname.split('/').pop();
+        window.location.href = "../reader?id=" + arcid + "&tank=" + tankId;
     }
 };
 

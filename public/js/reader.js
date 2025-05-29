@@ -12,6 +12,8 @@ Reader.showingSinglePage = true;
 Reader.preloadedImg = {};
 Reader.preloadedSizes = {};
 Reader.spaceScroll = { timeout: null, animationId: null };
+Reader.tankoubon = null;
+Reader.currentArchiveIndex = -1;
 //Spacebar Scroll Config
 Reader.scrollConfig = {   
     scrollDist: 75,      // Viewport % distance to scroll
@@ -26,6 +28,37 @@ Reader.initializeAll = function () {
     Reader.applyContainerWidth();
     Reader.registerPreload();
     document.documentElement.style.scrollBehavior = 'smooth';
+
+    // Check if we're in a tankoubon view
+    const urlParams = new URLSearchParams(window.location.search);
+    const tankId = urlParams.get('tank');
+    if (tankId) {
+        // Load tankoubon data
+        Server.callAPI(`/api/tankoubons/${tankId}`, "GET", null, I18N.ServerInfoError,
+            (tank) => {
+                Reader.tankoubon = tank;
+                Reader.currentArchiveIndex = tank.archives.indexOf(Reader.id);
+                if (Reader.currentArchiveIndex !== -1) {
+                    // Show Previous Episode button if not first episode
+                    if (Reader.currentArchiveIndex > 0) {
+                        const prevArchiveId = tank.archives[Reader.currentArchiveIndex - 1];
+                        const prevHandler = () => {
+                            window.location.href = `../reader?id=${prevArchiveId}&tank=${tankId}`;
+                        };
+                        $("#prev-episode, #prev-episode-infinite").show().on("click", prevHandler);
+                    }
+                    // Show Next Episode button if not last episode
+                    if (Reader.currentArchiveIndex < tank.archives.length - 1) {
+                        const nextArchiveId = tank.archives[Reader.currentArchiveIndex + 1];
+                        const nextHandler = () => {
+                            window.location.href = `../reader?id=${nextArchiveId}&tank=${tankId}`;
+                        };
+                        $("#next-episode, #next-episode-infinite").show().on("click", nextHandler);
+                    }
+                }
+            }
+        );
+    }
 
     // Bind events to DOM
     $(document).on("keyup", Reader.handleShortcuts);
@@ -364,7 +397,8 @@ Reader.handleShortcuts = function (e) {
     }
     switch (e.keyCode) {
     case 8: // backspace
-        document.location.href = $("#return-to-index").attr("href");
+        const returnLink = $("#return-to-tank").length ? "#return-to-tank" : "#return-to-index";
+        document.location.href = $(returnLink).attr("href");
         break;
     case 27: // escape
         LRR.closeOverlay();

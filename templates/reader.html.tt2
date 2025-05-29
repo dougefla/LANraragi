@@ -69,9 +69,23 @@
 
         <div id="i5">
             <div class="sb">
+                [% IF from_tankoubon %]
+                <div class="infinite-nav">
+                    <a id="prev-episode-infinite" class="page-link" style="display: none;" title="[% c.lh('Previous Episode') %]">
+                        <i class="fa fa-backward fa-3x"></i>
+                    </a>
+                    <a href="../tankoubon/[% tank_id %]" id="return-to-tank" title="[% c.lh('Done reading? Go back to Tankoubon View') %]">
+                        <i class="fa fa-angle-down fa-3x"></i>
+                    </a>
+                    <a id="next-episode-infinite" class="page-link" style="display: none;" title="[% c.lh('Next Episode') %]">
+                        <i class="fa fa-forward fa-3x"></i>
+                    </a>
+                </div>
+                [% ELSE %]
                 <a href="[% c.url_for("/").query(ref_query) %]" id="return-to-index" title="[% c.lh('Done reading? Go back to Archive Index') %]">
                     <i class="fa fa-angle-down fa-3x"></i>
                 </a>
+                [% END %]
             </div>
         </div>
 
@@ -270,6 +284,11 @@
 <!-- -->
 [% BLOCK arrows %]
 <div class="sn paginator">
+    [% IF from_tankoubon %]
+    <a id="prev-episode" class="page-link" style="display: none; font-size: 1.5em;" value="prev-episode" title="[% c.lh('Previous Episode') %]">
+        <i class="fa fa-backward"></i>
+    </a>
+    [% END %]
     <a class="fa fa-angle-double-left page-link" style="font-size: 1.5em;" value="outer-left"></a>
     <a class="fa fa-angle-left page-link" style="font-size: 1.5em;" value="left"></a>
 
@@ -280,6 +299,11 @@
 
     <a class="fa fa-angle-right page-link" style="font-size: 1.5em;" value="right"></a>
     <a class="fa fa-angle-double-right page-link" style="font-size: 1.5em;" value="outer-right"></a>
+    [% IF from_tankoubon %]
+    <a id="next-episode" class="page-link" style="display: none; font-size: 1.5em;" value="next-episode" title="[% c.lh('Next Episode') %]">
+        <i class="fa fa-forward"></i>
+    </a>
+    [% END %]
 </div>
 [% END %]
 <!-- -->

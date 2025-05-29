@@ -32,6 +32,10 @@ sub index {
             $query = Mojo::URL->new($referrer)->query->to_string;
         }
 
+        # Check if we're coming from a tankoubon view
+        my $from_tankoubon = defined $self->req->param('tank');
+        my $tank_id = $self->req->param('tank');
+
         $self->render(
             template       => "reader",
             title          => $self->LRR_CONF->get_htmltitle,
@@ -42,6 +46,8 @@ sub index {
             csshead        => generate_themes_header($self),
             version        => $self->LRR_VERSION,
             ref_query      => $query,
+            from_tankoubon => $from_tankoubon,
+            tank_id        => $tank_id,
             userlogged     => $self->LRR_CONF->enable_pass == 0 || $self->session('is_logged')
         );
     } else {
