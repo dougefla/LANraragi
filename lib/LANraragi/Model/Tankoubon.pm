@@ -37,10 +37,15 @@ sub get_tankoubon_list ( $page = 0 ) {
     my @result;
     foreach my $key ( sort @tanks ) {
         my ( $total, $filtered, %data ) = get_tankoubon($key);
+        
+        # Add the archive count to the data
+        my $archive_count = $redis->zcount($key, 1, "+inf");
+        $data{archive_count} = $archive_count;
+        
         push( @result, \%data );
     }
 
-    # # Only get the first X keys
+    # Only get the first X keys
     my $keysperpage = LANraragi::Model::Config->get_pagesize;
 
     # Return total keys and the filtered ones

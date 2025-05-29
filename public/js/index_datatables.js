@@ -244,11 +244,9 @@ IndexTable.renderTitle = function (data, type) {
                 '') : 
             new LRR.apiURL(`/api/archives/${id}/thumbnail`).toString();
 
-        const tankStats = isTankoubon ? 
-            `<div class="tank-stats">
-                <i class="fas fa-book"></i> ${data.archives ? data.archives.length : 0} Archives
-                <i class="fas fa-file ml-2"></i> ${data.pagecount || 0} Pages
-            </div>` : '';
+        const archiveCount = isTankoubon ? (data.archive_count || 0) : 0;
+        const archiveCountDiv = isTankoubon ? 
+            `<div class='archive-count'><i class='fas fa-book'></i> ${archiveCount}</div>` : '';
 
         // In selection mode, use a div with onclick handler
         const containerTag = 'div';
@@ -265,11 +263,11 @@ IndexTable.renderTitle = function (data, type) {
                         </a>
                         ${bookmarkIcon}
                         ${checkbox}
+                        ${archiveCountDiv}
                     </div>
                     <div class="id4">
                         ${title}
                         ${progressDiv}
-                        ${tankStats}
                     </div>
                 </${containerTag}>
             </div>`;

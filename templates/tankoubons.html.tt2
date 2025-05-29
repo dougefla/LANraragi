@@ -261,6 +261,26 @@
             justify-content: space-between;
         }
 
+        .archive-count {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(70, 130, 180, 0.9);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            z-index: 1;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .archive-count i {
+            font-size: 10px;
+        }
+
         /* View Toggle Button */
         .view-toggle {
             display: flex;

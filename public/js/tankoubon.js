@@ -110,12 +110,12 @@ window.Tankoubon = {
                         "</tr></thead><tbody>";
 
                     data.forEach(function (tank) {
-                        const archiveCount = tank.archives ? tank.archives.length : 0;
+                        const archiveCount = tank.archive_count || 0;
                         const lastModified = tank.last_modified ? new Date(tank.last_modified * 1000).toLocaleString() : "Never";
                         
-                        html += "<tr class='tankoubon-item' data-tank-id='" + tank.id + "' style='cursor: pointer;' onclick='window.location.href=\"./tankoubon/" + tank.id + "\"'>" +
+                        html += "<tr class='tankoubon-item' data-tank-id='" + tank.id + "' style='cursor: pointer; position: relative;' onclick='window.location.href=\"./tankoubon/" + tank.id + "\"'>" +
                             "<td class='tank-name'>" + tank.name + "</td>" +
-                            "<td>" + archiveCount + " archives</td>" +
+                            "<td><div class='archive-count'><i class='fas fa-book'></i> " + archiveCount + "</div></td>" +
                             "<td>" + lastModified + "</td>" +
                             "</tr>";
                     });
@@ -134,7 +134,7 @@ window.Tankoubon = {
 
                     Promise.all(previewPromises).then(tanksWithPreviews => {
                         tanksWithPreviews.forEach(tank => {
-                            const archiveCount = tank.archives ? tank.archives.length : 0;
+                            const archiveCount = tank.archive_count || 0;
                             const lastModified = tank.last_modified ? new Date(tank.last_modified * 1000).toLocaleString() : "Never";
                             
                             html += "<div class='tankoubon-item tankoubon-card' data-tank-id='" + tank.id + "' onclick='window.location.href=\"./tankoubon/" + tank.id + "\"'>" +
@@ -147,10 +147,10 @@ window.Tankoubon = {
                             }
 
                             html += "</div>" +
+                                "<div class='archive-count'><i class='fas fa-book'></i> " + archiveCount + "</div>" +
                                 "<div class='info'>" +
                                 "<div class='name'>" + tank.name + "</div>" +
                                 "<div class='stats'>" +
-                                "<span>" + archiveCount + " archives</span>" +
                                 "<span title='" + lastModified + "'><i class='fas fa-clock'></i></span>" +
                                 "</div>" +
                                 "</div>" +

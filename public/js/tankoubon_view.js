@@ -16,7 +16,7 @@ window.TankoubonView = {
             TankoubonView.switchViewMode(mode);
         });
 
-        // Load archives
+        // Load archives and populate episode selector
         this.loadArchives();
     },
 
@@ -118,6 +118,15 @@ window.TankoubonView = {
                     }
 
                     $('#archives-container').html(html);
+
+                    // Populate the episode selector after archives are loaded
+                    const select = $('#episode-selector');
+                    select.empty();
+                    select.append('<option value="">Select Episode...</option>');
+
+                    archives.forEach((archive, index) => {
+                        select.append(`<option value="${archive.arcid}">${index + 1}. ${archive.title}</option>`);
+                    });
                 });
             },
             error: function(xhr, status, error) {
@@ -563,6 +572,45 @@ window.TankoubonView = {
                 });
             }
         });
+    },
+
+    /**
+     * Populate the episode selection dropdown
+     */
+    populateEpisodeSelector: function() {
+        const tankId = window.location.pathname.split('/').pop();
+        $.ajax({
+            url: "../api/tankoubons/" + tankId,
+            type: "GET",
+            success: function(tank) {
+                if (!tank.archives || tank.archives.length === 0) return;
+
+                const archivePromises = tank.archives.map(arcid =>
+                    $.ajax({
+                        url: "../api/archives/" + arcid,
+                        type: "GET"
+                    })
+                );
+
+                Promise.all(archivePromises).then(archives => {
+                    const select = $('#episode-selector');
+                    select.empty();
+                    select.append('<option value="">Select Episode...</option>');
+
+                    archives.forEach((archive, index) => {
+                        select.append(`<option value="${archive.arcid}">${index + 1}. ${archive.title}</option>`);
+                    });
+                });
+            }
+        });
+    },
+
+    /**
+     * Jump to the selected episode
+     */
+    jumpToEpisode: function(arcid) {
+        if (!arcid) return;
+        window.location.href = "../reader?id=" + arcid;
     }
 };
 

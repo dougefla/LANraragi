@@ -272,6 +272,10 @@ sub build_tank_json($id) {
     # Ensure the tank name is properly decoded from Redis encoding
     my $tank_name = redis_decode($tank{name});
 
+    # Get the archive count
+    my $redis = LANraragi::Model::Config->get_redis;
+    my $archive_count = $redis->zcount($id, 1, "+inf");
+
     my $arcdata = {
         arcid        => $id,
         title       => $tank_name,
@@ -285,7 +289,8 @@ sub build_tank_json($id) {
         pagecount    => sum(map { ${$_}{pagecount} } @{$tank{full_data}}),
         lastreadtime => max(map { ${$_}{lastreadtime} } @{$tank{full_data}}),
         size         => sum(map { ${$_}{size} } @{$tank{full_data}}),
-        cover_archive => $tank{cover_archive}
+        cover_archive => $tank{cover_archive},
+        archive_count => $archive_count
     };
 
     return $arcdata;

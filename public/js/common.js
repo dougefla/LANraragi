@@ -307,6 +307,18 @@ LRR.buildThumbnailDiv = function (data, tagTooltip = true) {
             <i class="fas fa-check"></i>
          </div>` : '';
 
+    const thumbnailUrl = isTankoubon ? 
+        (data.cover_archive ? 
+            new LRR.apiURL(`/api/archives/${data.cover_archive}/thumbnail`).toString() : 
+            (data.archives && data.archives.length > 0 ? 
+                new LRR.apiURL(`/api/archives/${data.archives[0]}/thumbnail`) : 
+                new LRR.apiURL('/img/noThumb.png'))) 
+        : new LRR.apiURL(`/api/archives/${id}/thumbnail`);
+
+    const archiveCount = isTankoubon ? (data.archive_count || 0) : 0;
+    const archiveCountDiv = isTankoubon ? 
+        `<div class='archive-count'><i class='fas fa-book'></i> ${archiveCount}</div>` : '';
+
     // Don't enforce no_fallback=true here, we don't want those divs to trigger Minion jobs 
     return `<div class="id1 context-menu ${isTankoubon ? 'tankoubon-thumb tankobon-item' : ''} swiper-slide ${isSelectable ? 'selectable' : ''}" id="${id}" ${isSelectable ? `onclick="event.preventDefault(); event.stopPropagation(); IndexTable.handleSelection('${id}'); return false;"` : ''}>
                 ${checkbox}
@@ -318,17 +330,12 @@ LRR.buildThumbnailDiv = function (data, tagTooltip = true) {
                     <a href="${reader_url}" title="${LRR.encodeHTML(title)}">
                         <img style="position:relative;" id="${id}_thumb" src="${new LRR.apiURL('/img/wait_warmly.jpg')}"/>
                         <i id="${id}_spinner" class="fa fa-4x fa-cog fa-spin ttspinner"></i>
-                        <img src="${isTankoubon ? 
-                            (data.cover_archive ? 
-                                new LRR.apiURL(`/api/archives/${data.cover_archive}/thumbnail`) : 
-                                (data.archives && data.archives.length > 0 ? 
-                                    new LRR.apiURL(`/api/archives/${data.archives[0]}/thumbnail`) : 
-                                    new LRR.apiURL('/img/noThumb.png'))) 
-                            : new LRR.apiURL(`/api/archives/${id}/thumbnail`)}" 
+                        <img src="${thumbnailUrl}" 
                                 onload="$('#${id}_thumb').remove(); $('#${id}_spinner').remove();" 
                                 onerror="this.src='${new LRR.apiURL("/img/noThumb.png")}'"/>
                     </a>
                     ${bookmarkIcon}
+                    ${archiveCountDiv}
                 </div>
                 <div class="id4">
                         <span class="tags tag-tooltip" ${tagTooltip === true ? "onmouseover=\"IndexTable.buildTagTooltip(this)\"" : ""}>${LRR.colorCodeTags(tags)}</span>

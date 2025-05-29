@@ -217,6 +217,33 @@
             background: #6c757d;
             color: white;
         }
+
+        .quick-episode-menu {
+            margin-bottom: 15px;
+        }
+
+        .episode-select {
+            width: 100%;
+            max-width: 300px;
+            padding: 8px 12px;
+            border: 1px solid #4f535b;
+            border-radius: 5px;
+            background: #2a2a2a;
+            color: #fff;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .episode-select:focus {
+            outline: none;
+            border-color: #6c757d;
+        }
+
+        .episode-select option {
+            background: #2a2a2a;
+            color: #fff;
+            padding: 8px;
+        }
     </style>
 
     [% csshead %]
@@ -284,6 +311,11 @@
             </div>
             <div class='tankoubon-info'>
                 <h2 class='tankoubon-title'>[% tank.name %]</h2>
+                <div class='quick-episode-menu'>
+                    <select id='episode-selector' class='episode-select' onchange='TankoubonView.jumpToEpisode(this.value)'>
+                        <option value=''>Select Episode...</option>
+                    </select>
+                </div>
                 <div class='tankoubon-stats'>
                     <div>[% tank.archives.size %] Archives</div>
                     [% IF tank.tags %]
