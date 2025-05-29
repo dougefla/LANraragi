@@ -62,11 +62,17 @@ sub build_backup_JSON {
         my $tank_id       = %$tank{id};
         my $tank_title    = %$tank{name};
         my @tank_archives = @{ %$tank{archives} };
+        my $tank_cover    = %$tank{cover_archive};
+        my $tank_tags     = %$tank{tags};
+        my $tank_summary  = %$tank{summary};
 
         my %tank = (
-            tankid   => $tank_id,
-            name     => $tank_title,
-            archives => \@tank_archives
+            tankid        => $tank_id,
+            name         => $tank_title,
+            archives     => \@tank_archives,
+            cover_archive => $tank_cover,
+            tags         => $tank_tags,
+            summary      => $tank_summary
         );
 
         push @{ $backup{tankoubons} }, \%tank;
@@ -139,18 +145,48 @@ sub restore_from_JSON {
         }
     }
 
-    foreach my $tank ( @{ $json->{tankoubons} } ) {
+    # Handle tankoubons if they exist in the backup
+    if (exists $json->{tankoubons}) {
+        foreach my $tank ( @{ $json->{tankoubons} } ) {
+            eval {
+                my $tank_id = $tank->{"tankid"};
+                $logger->info("Restoring Tankoubon $tank_id...");
 
-        my $tank_id = $tank->{"tankid"};
-        $logger->info("Restoring Tankoubon $tank_id...");
+                # Create tankoubon with properly encoded name
+                my $name = $tank->{"name"};
+                LANraragi::Model::Tankoubon::create_tankoubon( $name, $tank_id );
 
-        my $name     = redis_encode( $tank->{"name"} );
-        my @archives = @{ $tank->{"archives"} };
+                # Update archives list with proper error handling
+                my @archives = @{ $tank->{"archives"} };
+                my ($result, $error) = LANraragi::Model::Tankoubon::update_archive_list( $tank_id, { archives => \@archives } );
+                
+                if (!$result) {
+                    $logger->warn("Error updating archive list for tankoubon $tank_id: $error");
+                }
 
-        LANraragi::Model::Tankoubon::create_tankoubon( $name, $tank_id );
+                # Restore metadata (tags, summary, cover)
+                my %metadata = (
+                    metadata => {
+                        tags    => $tank->{"tags"},
+                        summary => $tank->{"summary"}
+                    }
+                );
 
-        # Backups use the same data structure as tank updates, so we can just pass the data object as-is.
-        LANraragi::Model::Tankoubon::update_archive_list( $tank_id, $tank );
+                # Add cover archive if it exists
+                if (exists $tank->{"cover_archive"} && defined $tank->{"cover_archive"}) {
+                    $metadata{cover_archive} = $tank->{"cover_archive"};
+                }
+
+                # Update all metadata
+                my ($result, $error) = LANraragi::Model::Tankoubon::update_metadata( $tank_id, \%metadata );
+                if (!$result) {
+                    $logger->warn("Error updating metadata for tankoubon $tank_id: $error");
+                }
+            };
+            if ($@) {
+                $logger->warn("Error restoring tankoubon: $@");
+            }
+        }
     }
 
     foreach my $archive ( @{ $json->{archives} } ) {
