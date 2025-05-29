@@ -132,13 +132,28 @@ sub index_tags_for_id ( $redis, $redistx, $index_id, $archive_id ) {
     my $logger   = get_logger( "Tag Stats", "lanraragi" );
     my $has_tags = 0;
 
-    unless ( $redis->hexists( $archive_id, "tags" ) ) {
-        return 0;
+    # For tankoubons, get tags from the sorted set
+    my $rawtags;
+    if ($archive_id =~ /^TANK/) {
+        my @tank_tags = $redis->zrangebyscore( $archive_id, $LANraragi::Utils::Database::TANK_METADATA{"tags"}, $LANraragi::Utils::Database::TANK_METADATA{"tags"}, qw{LIMIT 0 1} );
+        if (@tank_tags) {
+            my $tag_str = $tank_tags[0];
+            $tag_str =~ s/^tags_//;  # Remove the prefix
+            $rawtags = $tag_str;
+            $logger->debug("Got tankoubon tags: $rawtags");
+        }
+    } else {
+        # For regular archives, get tags from the hash
+        unless ( $redis->hexists( $archive_id, "tags" ) ) {
+            return 0;
+        }
+        $rawtags = $redis->hget( $archive_id, "tags" );
     }
 
+    return 0 unless $rawtags;
+
     # Split tags by comma and index them
-    my $rawtags = $redis->hget( $archive_id, "tags" );
-    my @tags    = split( /,\s?/, redis_decode($rawtags) );
+    my @tags = split( /,\s?/, redis_decode($rawtags) );
 
     foreach my $t (@tags) {
         $t = trim($t);
@@ -156,6 +171,7 @@ sub index_tags_for_id ( $redis, $redistx, $index_id, $archive_id ) {
 
         # Tag is lowercased here to avoid redundancy/dupes
         my $redis_tag = redis_encode( lc($t) );
+        $logger->debug("Indexing tag: $redis_tag for ID: $index_id");
 
         # Increment tag in stats
         $redistx->zincrby( "LRR_STATS", 1, $redis_tag );

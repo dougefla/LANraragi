@@ -115,11 +115,9 @@ sub search_uncached ( $category_id, $filter, $sortkey, $sortorder, $newonly, $un
     # We intersect those lists as we proceed to get the final result.
     my @filtered;
     if ($grouptanks) {
-
         # Start with our tank IDs, and all other archive IDs that aren't in tanks
         @filtered = $redis->smembers("LRR_TANKGROUPED");
     } else {
-
         # Start with all our archive IDs. Tank IDs won't be present in this search.
         @filtered = $redis_db->keys('????????????????????????????????????????');
     }
@@ -128,7 +126,6 @@ sub search_uncached ( $category_id, $filter, $sortkey, $sortorder, $newonly, $un
     my %category = LANraragi::Model::Category::get_category($category_id);
 
     if (%category) {
-
         # If the category is dynamic, get its search predicate and add it to the tokens.
         # If it's static however, we can use its ID list as the base for our result array.
         if ( $category{search} ne "" ) {
@@ -166,55 +163,12 @@ sub search_uncached ( $category_id, $filter, $sortkey, $sortorder, $newonly, $un
 
             my @ids = ();
 
-           # Specific case for pagecount searches
-           # You can search for galleries with a specific number of pages with pages:20, or with a page range: pages:>20 pages:<=30.
-           # Or you can search for galleries with a specific number of pages read with read:20, or any pages read: read:>0
-            if ( $tag =~ /^(read|pages):(>|<|>=|<=)?(\d+)$/ ) {
-                my $col       = $1;
-                my $operator  = $2;
-                my $pagecount = $3;
-
-                $logger->debug("Searching for IDs with $operator $pagecount $col");
-
-                # If no operator is specified, we assume it's an exact match
-                $operator = "=" if !$operator;
-
-                # Change the column based off the tag searched.
-                # "pages" -> "pagecount"
-                # "read" -> "progress"
-                $col = $col eq "pages" ? "pagecount" : "progress";
-
-                # Go through all IDs in @filtered and check if they have the right pagecount
-                # This could be sped up with an index, but it's probably not worth it.
-                foreach my $id (@filtered) {
-
-                    # Tanks don't have a set pagecount property, so they're not included here for now.
-                    # TODO TANKS: Maybe an index would be good actually..
-                    if ( $id =~ /^TANK/ ) {
-                        next;
-                    }
-
-                    # Default to 0 if null.
-                    my $count = $redis_db->hget( $id, $col ) || 0;
-
-                    if (   ( $operator eq "=" && $count == $pagecount )
-                        || ( $operator eq ">"  && $count > $pagecount )
-                        || ( $operator eq ">=" && $count >= $pagecount )
-                        || ( $operator eq "<"  && $count < $pagecount )
-                        || ( $operator eq "<=" && $count <= $pagecount ) ) {
-                        push @ids, $id;
-                    }
-                }
-            }
-
             # For exact tag searches, just check if an index for it exists
             if ( $isexact && $redis->exists("INDEX_$tag") ) {
-
                 # Get the list of IDs for this tag
                 @ids = $redis->smembers("INDEX_$tag");
                 $logger->debug( "Found tag index for $tag, containing " . scalar @ids . " IDs" );
             } else {
-
                 # Get index keys that match this tag.
                 # If the tag has a namespace, We don't add a wildcard at the start of the tag to keep it intact.
                 # Otherwise, we add a wildcard at the start to match all namespaces.
@@ -233,7 +187,6 @@ sub search_uncached ( $category_id, $filter, $sortkey, $sortorder, $newonly, $un
             my $namesearch = $isexact ? "$tag\x00*" : "*$tag*";
             my $scan       = -1;
             while ( $scan != 0 ) {
-
                 # First iteration
                 if ( $scan == -1 ) { $scan = 0; }
                 $logger->trace("Scanning for $namesearch, cursor=$scan");
@@ -242,7 +195,6 @@ sub search_uncached ( $category_id, $filter, $sortkey, $sortorder, $newonly, $un
                 $scan = $result[0];
 
                 foreach my $title ( @{ $result[1] } ) {
-
                     if ( $title eq "0" ) { next; }    # Skip scores
                     $logger->trace("Found title match: $title");
 
@@ -252,8 +204,48 @@ sub search_uncached ( $category_id, $filter, $sortkey, $sortorder, $newonly, $un
                 }
             }
 
-            if ( scalar @ids == 0 && !$isneg ) {
+            # For tankoubons, also search in their metadata
+            if ($grouptanks) {
+                foreach my $id (@filtered) {
+                    if ($id =~ /^TANK/) {
+                        # Get tank metadata
+                        my $tank_name = $redis_db->zrangebyscore( $id, $LANraragi::Utils::Database::TANK_METADATA{"name"}, $LANraragi::Utils::Database::TANK_METADATA{"name"}, qw{LIMIT 0 1} );
+                        my $tank_summary = $redis_db->zrangebyscore( $id, $LANraragi::Utils::Database::TANK_METADATA{"summary"}, $LANraragi::Utils::Database::TANK_METADATA{"summary"}, qw{LIMIT 0 1} );
+                        my $tank_tags = $redis_db->zrangebyscore( $id, $LANraragi::Utils::Database::TANK_METADATA{"tags"}, $LANraragi::Utils::Database::TANK_METADATA{"tags"}, qw{LIMIT 0 1} );
 
+                        # Remove prefix from metadata
+                        $tank_name =~ s/^name_//i if $tank_name;
+                        $tank_summary =~ s/^summary_//i if $tank_summary;
+                        $tank_tags =~ s/^tags_//i if $tank_tags;
+
+                        # Convert the search pattern to match archive search behavior
+                        my $search_pattern = $tag;
+                        $search_pattern =~ s/\.\*/\*/g;  # Convert .* back to * for wildcard matching
+                        $search_pattern =~ s/\./\?/g;    # Convert . back to ? for single character matching
+
+                        # For exact matches, only match complete tags
+                        if ($isexact) {
+                            # Split tags and check each one
+                            my @tank_tag_list = split(/,\s*/, $tank_tags);
+                            foreach my $t (@tank_tag_list) {
+                                if (lc($t) eq lc($search_pattern)) {
+                                    push @ids, $id;
+                                    last;
+                                }
+                            }
+                        } else {
+                            # For non-exact matches, search in all metadata
+                            if (($tank_name && $tank_name =~ /$search_pattern/i) ||
+                                ($tank_summary && $tank_summary =~ /$search_pattern/i) ||
+                                ($tank_tags && $tank_tags =~ /$search_pattern/i)) {
+                                push @ids, $id;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if ( scalar @ids == 0 && !$isneg ) {
                 # No more results, we can end search here
                 $logger->trace("No results for this token, halting search.");
                 @filtered = ();
@@ -296,13 +288,9 @@ sub search_uncached ( $category_id, $filter, $sortkey, $sortorder, $newonly, $un
             # Just intersect the ordered list with the filtered one to get the final result
             @filtered = intersect_arrays( \@filtered, \@ordered, 0 );
         } else {
-
             # For other sorting, we need to get the metadata for each archive and sort it manually.
             # Just use the old sort algorithm at this point.
             @filtered = sort_results( $sortkey, $sortorder, @filtered );
-
-            # We could theoretically use the tag indexes for this by scanning them all
-            # to find the filtered IDs and then ordering on those namespace/ID pairs, but that's a lot of work for little gain.
         }
     }
 
@@ -411,21 +399,38 @@ sub sort_results ( $sortkey, $sortorder, @filtered ) {
     # Map our archives to a hash, where the key is the ID and the value is what we want to sort by.
     # For lastreadtime, we just get the value directly.
     if ( $sortkey eq "lastread" ) {
-        %tmpfilter = map { $_ => $redis->hget( $_, "lastreadtime" ) } @filtered;
+        # For tanks, we need to handle them differently since they use zrangebyscore
+        %tmpfilter = map { 
+            if ($_ =~ /^TANK/) {
+                # For tanks, use 0 as lastreadtime since they don't track reading
+                $_ => 0;
+            } else {
+                # For regular archives, use hget
+                $_ => $redis->hget( $_, "lastreadtime" );
+            }
+        } @filtered;
 
         # Invert sort order for lastreadtime, biggest timestamps come first
         @sorted = map { $_->[0] }                    # Map back to only having the ID
           sort { $b->[1] <=> $a->[1] }               # Sort by the timestamp
-          grep { defined $_->[1] && $_->[1] > 0 }    # Remove nil timestamps
+          grep { defined $_->[1] }                    # Remove nil timestamps
           map  { [ $_, $tmpfilter{$_} ] }            # Map to an array containing the ID and the timestamp
           @filtered;                                 # List of IDs
     } else {
-
         my $re = qr/$sortkey/;
 
-        # For other tags, we use the first tag we found that matches the sortkey/namespace.
-        # (If no tag, defaults to "zzzz")
-        %tmpfilter = map { $_ => ( $redis->hget( $_, "tags" ) =~ m/.*${re}:(.*?)(\,.*|$)/ ) ? $1 : "zzzz" } @filtered;
+        # For other tags, we need to handle tanks and archives differently
+        %tmpfilter = map {
+            if ($_ =~ /^TANK/) {
+                # For tanks, get tags using zrangebyscore
+                my $tank_tags = $redis->zrangebyscore( $_, $LANraragi::Utils::Database::TANK_METADATA{"tags"}, $LANraragi::Utils::Database::TANK_METADATA{"tags"}, qw{LIMIT 0 1} );
+                $tank_tags =~ s/^tags_//i if $tank_tags;
+                $_ => ($tank_tags =~ m/.*${re}:(.*?)(\,.*|$)/) ? $1 : "zzzz";
+            } else {
+                # For regular archives, use hget
+                $_ => ($redis->hget( $_, "tags" ) =~ m/.*${re}:(.*?)(\,.*|$)/) ? $1 : "zzzz";
+            }
+        } @filtered;
 
         # Read comments from the bottom up for a better understanding of this sort algorithm.
         @sorted = map { $_->[0] }                  # Map back to only having the ID

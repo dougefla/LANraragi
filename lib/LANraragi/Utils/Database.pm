@@ -23,6 +23,9 @@ use LANraragi::Utils::Tags    qw(unflat_tagrules tags_rules_to_array restore_CRL
 use LANraragi::Utils::Archive qw(get_filelist);
 use LANraragi::Utils::Logging qw(get_logger);
 
+# Metadata fields for tankoubons and their scores in the sorted set
+our %TANK_METADATA = ( "name" => 0, "summary" => -1, "tags" => -2, "cover_archive" => -3 );
+
 # Functions for interacting with the DB Model.
 use Exporter 'import';
 our @EXPORT_OK = qw(
@@ -158,7 +161,8 @@ sub get_archive_json ( $redis, $id ) {
         die unless $redis->exists($id);
 
         if ($id =~ /^TANK/) {
-
+            # For tankoubons, use the tankoubon-specific functions
+            my ($total, $filtered, %tank) = LANraragi::Model::Tankoubon::get_tankoubon($id, 1);
             $arcdata = build_tank_json($id);
         } else {
             my %hash = $redis->hgetall($id);
@@ -183,7 +187,7 @@ sub get_archive_json_multi (@ids) {
             # Tanks can be mixed in with search results, and need to be handled differently than archive hashes.
             if ($id =~ /^TANK/) {
                 # Just get the name -- We'll have to call the tank API afterwards to get full data anyway.
-                $redis->zrangebyscore( $id, 0, 0, qw{LIMIT 0 1} );
+                $redis->zrangebyscore( $id, $TANK_METADATA{"name"}, $TANK_METADATA{"name"}, qw{LIMIT 0 1} );
             } else {
                 $redis->hgetall($id);
             }
@@ -201,6 +205,8 @@ sub get_archive_json_multi (@ids) {
         my $arcdata;
 
         if ($id =~ /^TANK/) {
+            # For tankoubons, use the tankoubon-specific functions
+            my ($total, $filtered, %tank) = LANraragi::Model::Tankoubon::get_tankoubon($id, 1);
             $arcdata = build_tank_json($id);
         } else {
             my %hash = @{ $results[$i] };
@@ -260,11 +266,8 @@ sub build_json ( $id, %hash ) {
 sub build_tank_json($id) {
     my %tank = LANraragi::Model::Tankoubon::get_tankoubon($id, 1);
 
-    # Use only the first archive's tags
-    my $first_archive_tags = "";
-    if ($tank{full_data} && @{$tank{full_data}}[0]) {
-        $first_archive_tags = ${@{$tank{full_data}}[0]}{tags};
-    }
+    # Get the tankoubon's own tags
+    my $tank_tags = $tank{tags} || "";
 
     # Ensure the tank name is properly decoded from Redis encoding
     my $tank_name = redis_decode($tank{name});
@@ -274,8 +277,8 @@ sub build_tank_json($id) {
         title       => $tank_name,
         name        => $tank_name,  # Add name field as well for consistency
         filename    => $tank_name,  # Use tank name as filename for display
-        tags         => $first_archive_tags,
-        summary      => "Tankoubon containing: " . join(", ", map { ${$_}{title} } @{$tank{full_data}}),
+        tags         => $tank_tags,
+        summary      => $tank{summary} || "Tankoubon containing: " . join(", ", map { ${$_}{title} } @{$tank{full_data}}),
         isnew        => (@{$tank{full_data}} && ${@{$tank{full_data}}[0]}{isnew}) ? "true" : "false",
         extension    => ".tank",
         progress     => 0,  # Could be calculated if needed

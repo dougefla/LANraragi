@@ -386,6 +386,15 @@ sub add_to_tankoubon ( $tank_id, $arc_id ) {
 
         my $score = $redis->zcard($tank_id);
 
+        # If this is the first archive being added (score == 1 because metadata fields take up scores -3 to 0)
+        if ($score == 1) {
+            # Copy tags from the first archive
+            my $archive_tags = $redis->hget($arc_id, "tags");
+            if ($archive_tags) {
+                update_metadata_field($tank_id, "tags", redis_decode($archive_tags));
+            }
+        }
+
         $redis->zadd( $tank_id, $score, $arc_id );
         $redis->quit;
 

@@ -994,31 +994,58 @@ Index.loadContextMenuTankoubons = function (arcid) {
         name: I18N.NewTankoubon,
         icon: "fas fa-plus",
         callback: function () {
-            LRR.showPopUp({
-                title: I18N.NewTankoubon,
-                input: "text",
-                inputValue: I18N.TankoubonDefaultName,
-                showCancelButton: true,
-                inputValidator: (value) => {
-                    if (!value) {
-                        return I18N.MissingTankoubonName;
-                    }
-                }
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    // Create tankoubon and add archive to it
-                    $.ajax({
-                        url: "api/tankoubons",
-                        type: "PUT",
-                        data: { name: result.value },
-                        success: function (data) {
-                            if (data.success) {
-                                Tankoubon.addArchive(data.tankoubon_id, arcid);
-                            } else {
-                                LRR.showErrorToast("Error creating tankoubon: " + data.error);
+            // First get the archive's tags
+            $.ajax({
+                url: "api/archives/" + arcid,
+                type: "GET",
+                success: function(archive) {
+                    LRR.showPopUp({
+                        title: I18N.NewTankoubon,
+                        input: "text",
+                        inputValue: I18N.TankoubonDefaultName,
+                        showCancelButton: true,
+                        inputValidator: (value) => {
+                            if (!value) {
+                                return I18N.MissingTankoubonName;
                             }
                         }
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            // Create tankoubon and add archive to it
+                            $.ajax({
+                                url: "api/tankoubons",
+                                type: "PUT",
+                                data: { name: result.value },
+                                success: function (data) {
+                                    if (data.success) {
+                                        // First update the tankoubon with the archive's tags
+                                        $.ajax({
+                                            url: "api/tankoubons/" + data.tankoubon_id,
+                                            type: "PUT",
+                                            contentType: "application/json",
+                                            data: JSON.stringify({
+                                                metadata: {
+                                                    tags: archive.tags || ""
+                                                }
+                                            }),
+                                            success: function() {
+                                                // Then add the archive
+                                                Tankoubon.addArchive(data.tankoubon_id, arcid);
+                                            },
+                                            error: function(xhr, status, error) {
+                                                LRR.showErrorToast("Error updating tankoubon tags: " + error);
+                                            }
+                                        });
+                                    } else {
+                                        LRR.showErrorToast("Error creating tankoubon: " + data.error);
+                                    }
+                                }
+                            });
+                        }
                     });
+                },
+                error: function(xhr, status, error) {
+                    LRR.showErrorToast("Error getting archive: " + error);
                 }
             });
         }

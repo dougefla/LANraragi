@@ -13,7 +13,7 @@ $IMAGE_NAME = "douge/lanraragi"
 Write-Host "Building Docker image for LANraragi version $VERSION..."
 
 # Build the image
-docker build -t ${IMAGE_NAME}:${VERSION} -f ./tools/build/docker/Dockerfile .
+docker build --no-cache -t ${IMAGE_NAME}:${VERSION} -f ./tools/build/docker/Dockerfile .
 
 Write-Host "Tagging latest..."
 # Tag as latest

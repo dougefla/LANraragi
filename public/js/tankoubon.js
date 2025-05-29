@@ -364,26 +364,90 @@ window.Tankoubon = {
      * Add an archive to a tankoubon
      */
     addArchive: function (tankId, archiveId) {
+        // First get the tankoubon's current archives
         $.ajax({
-            url: "api/tankoubons/" + tankId + "/archives/" + archiveId,
-            type: "PUT",
-            success: function (data) {
-                if (data.success) {
-                    LRR.toast({
-                        heading: "Success!",
-                        text: data.message,
-                        icon: "success"
+            url: "api/tankoubons/" + tankId,
+            type: "GET",
+            success: function(tank) {
+                // If this is the first archive being added to the tankoubon
+                if (!tank.archives || tank.archives.length === 0) {
+                    // Get the archive's tags and update the tankoubon
+                    $.ajax({
+                        url: "api/archives/" + archiveId,
+                        type: "GET",
+                        success: function(archive) {
+                            // Update tankoubon with the archive's tags
+                            $.ajax({
+                                url: "api/tankoubons/" + tankId,
+                                type: "PUT",
+                                contentType: "application/json",
+                                data: JSON.stringify({
+                                    metadata: {
+                                        tags: archive.tags || ""
+                                    }
+                                }),
+                                success: function() {
+                                    // Then add the archive
+                                    $.ajax({
+                                        url: "api/tankoubons/" + tankId + "/archives/" + archiveId,
+                                        type: "PUT",
+                                        success: function(data) {
+                                            if (data.success) {
+                                                LRR.toast({
+                                                    heading: "Success!",
+                                                    text: data.message,
+                                                    icon: "success"
+                                                });
+                                                // Redraw the datatable to reflect changes
+                                                if (IndexTable.dataTable.ajax) {
+                                                    IndexTable.dataTable.ajax.reload();
+                                                }
+                                            } else {
+                                                LRR.showErrorToast("Error adding archive: " + data.error);
+                                            }
+                                        },
+                                        error: function(xhr, status, error) {
+                                            LRR.showErrorToast("Error adding archive: " + error);
+                                        }
+                                    });
+                                },
+                                error: function(xhr, status, error) {
+                                    LRR.showErrorToast("Error updating tankoubon tags: " + error);
+                                }
+                            });
+                        },
+                        error: function(xhr, status, error) {
+                            LRR.showErrorToast("Error getting archive: " + error);
+                        }
                     });
-                    // Redraw the datatable to reflect changes
-                    if (IndexTable.dataTable.ajax) {
-                        IndexTable.dataTable.ajax.reload();
-                    }
                 } else {
-                    LRR.showErrorToast("Error adding archive: " + data.error);
+                    // If not the first archive, just add it normally
+                    $.ajax({
+                        url: "api/tankoubons/" + tankId + "/archives/" + archiveId,
+                        type: "PUT",
+                        success: function(data) {
+                            if (data.success) {
+                                LRR.toast({
+                                    heading: "Success!",
+                                    text: data.message,
+                                    icon: "success"
+                                });
+                                // Redraw the datatable to reflect changes
+                                if (IndexTable.dataTable.ajax) {
+                                    IndexTable.dataTable.ajax.reload();
+                                }
+                            } else {
+                                LRR.showErrorToast("Error adding archive: " + data.error);
+                            }
+                        },
+                        error: function(xhr, status, error) {
+                            LRR.showErrorToast("Error adding archive: " + error);
+                        }
+                    });
                 }
             },
-            error: function (xhr, status, error) {
-                LRR.showErrorToast("Error adding archive: " + error);
+            error: function(xhr, status, error) {
+                LRR.showErrorToast("Error getting tankoubon: " + error);
             }
         });
     },
