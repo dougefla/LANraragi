@@ -1706,14 +1706,11 @@ msgstr "单行本"
 msgid "Select Mode"
 msgstr "选择模式"
 
-msgid "Add to Tankoubon"
-msgstr "添加到单行本"
-
 msgid "Delete Selected"
-msgstr "删除所选"
+msgstr "删除选中"
 
 msgid "Group Tankoubon"
-msgstr "分组单行本"
+msgstr "单行本分组"
 
 msgid "View Details"
 msgstr "查看详情"
@@ -1786,3 +1783,18 @@ msgstr "档案"
 
 msgid "pages"
 msgstr "页"
+
+msgid "Delete Tankoubon (All)"
+msgstr "删除单行本（全部）"
+
+msgid "All categories will be deleted permanently. This action cannot be undone."
+msgstr "所有分类将被永久删除。此操作无法撤销。"
+
+msgid "All categories have been deleted!"
+msgstr "所有分类已被删除！"
+
+msgid "Error deleting all categories"
+msgstr "删除所有分类时出错"
+
+msgid "Add to Tankoubon"
+msgstr "添加到单行本"

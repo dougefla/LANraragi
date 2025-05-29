@@ -1,12 +1,21 @@
 package LANraragi::Controller::Api::Tankoubon;
-use Mojo::Base 'Mojolicious::Controller';
+use strict;
+use warnings;
+use utf8;
 
+use Mojo::Base 'Mojolicious::Controller';
 use Redis;
 use Encode;
 
 use LANraragi::Model::Tankoubon;
 use LANraragi::Model::Config;
+use LANraragi::Model::Archive;
 use LANraragi::Utils::Generic qw(render_api_response);
+
+our $VERSION = '1.0';
+
+# Prevent subroutine redefinition warnings
+no warnings 'redefine';
 
 sub get_tankoubon_list {
     my $self = shift;
