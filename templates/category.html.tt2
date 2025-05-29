@@ -60,6 +60,7 @@
                 <div style="text-align:center">
                     <input id='new-static' type='button' value='[% c.lh("New Static Category") %]' class='stdbtn'>
                     <input id='new-dynamic' type='button' value='[% c.lh("New Dynamic Category") %]' class='stdbtn'>
+                    <input id='delete-all' type='button' value='[% c.lh("Delete All Categories") %]' class='stdbtn' style='margin-left: 10px; background-color: #d33;'>
                 </div> <br>
 
                 [% c.lh("Select a category in the combobox below to edit its name, the archives it contains, or its predicate.") %]

@@ -47,12 +47,16 @@ window.Tankoubon = {
                     case "delete":
                         Tankoubon.deleteTankoubon(tankId);
                         break;
+                    case "delete_all":
+                        Tankoubon.deleteTankoubonAndArchives(tankId);
+                        break;
                 }
             },
             items: {
                 "view": {name: "View Details", icon: "fas fa-book"},
                 "edit": {name: "Edit Name", icon: "fas fa-edit"},
-                "delete": {name: "Delete", icon: "fas fa-trash"}
+                "delete": {name: "Delete", icon: "fas fa-trash"},
+                "delete_all": {name: "Delete Tankoubon (All)", icon: "fas fa-trash-alt"}
             }
         });
 
@@ -295,13 +299,61 @@ window.Tankoubon = {
                                 text: I18N.TankoubonDeleted,
                                 icon: "success"
                             });
-                            Tankoubon.loadTankoubonList();
+                            // If we're in the main archive view, refresh the datatable
+                            if (IndexTable.dataTable.ajax) {
+                                IndexTable.dataTable.ajax.reload();
+                            } else {
+                                // Otherwise, we're in the tankoubon list view
+                                Tankoubon.loadTankoubonList();
+                            }
                         } else {
                             LRR.showErrorToast("Error deleting tankoubon: " + data.error);
                         }
                     },
                     error: function (xhr, status, error) {
                         LRR.showErrorToast("Error deleting tankoubon: " + error);
+                    }
+                });
+            }
+        });
+    },
+
+    /**
+     * Delete a tankoubon and all its archives
+     */
+    deleteTankoubonAndArchives: function (tankId) {
+        LRR.showPopUp({
+            title: "Delete Tankoubon and Archives",
+            text: "Are you sure you want to delete this tankoubon AND all archives inside it? This action cannot be undone!",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonColor: "#d33",
+            confirmButtonText: "Delete All"
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: "api/tankoubons/" + tankId + "?delete_archives=1",
+                    type: "DELETE",
+                    success: function (data) {
+                        if (data.success) {
+                            LRR.toast({
+                                heading: "Success!",
+                                text: "Tankoubon and all its archives have been deleted!",
+                                icon: "success"
+                            });
+                            // If we're in the main archive view, refresh the datatable
+                            if (IndexTable.dataTable.ajax) {
+                                IndexTable.dataTable.ajax.reload();
+                            } else {
+                                // Otherwise, we're in the tankoubon list view
+                                Tankoubon.loadTankoubonList();
+                            }
+                        } else {
+                            LRR.showErrorToast("Error deleting tankoubon and archives: " + data.error);
+                        }
+                    },
+                    error: function (xhr, status, error) {
+                        LRR.showErrorToast("Error deleting tankoubon and archives: " + error);
                     }
                 });
             }
@@ -322,8 +374,10 @@ window.Tankoubon = {
                         text: data.message,
                         icon: "success"
                     });
-                    // Update tankobon tags after adding archive
-                    TankoubonView.updateTankoubonTags(tankId);
+                    // Redraw the datatable to reflect changes
+                    if (IndexTable.dataTable.ajax) {
+                        IndexTable.dataTable.ajax.reload();
+                    }
                 } else {
                     LRR.showErrorToast("Error adding archive: " + data.error);
                 }

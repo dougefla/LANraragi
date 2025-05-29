@@ -14,6 +14,10 @@ use List::Util qw(min);
 use LANraragi::Utils::Database qw(redis_encode redis_decode invalidate_cache get_archive_json_multi get_tankoubons_by_file);
 use LANraragi::Utils::Generic  qw(array_difference filter_hash_by_keys);
 use LANraragi::Utils::Logging  qw(get_logger);
+use LANraragi::Model::Archive;
+
+use Exporter 'import';
+our @EXPORT = qw(get_tankoubon_list create_tankoubon get_tankoubon delete_tankoubon update_tankoubon add_to_tankoubon remove_from_tankoubon get_tankoubons_containing_archive delete_tankoubon_and_archives);
 
 my %TANK_METADATA = ( "name" => 0, "summary" => -1, "tags" => -2, "cover_archive" => -3 );
 
@@ -534,6 +538,23 @@ sub fetch_metadata_fields ($tank_id) {
     }
 
     return %metadata;
+}
+
+# Delete a tankoubon and all its archives
+sub delete_tankoubon_and_archives {
+    my $tankid = shift;
+
+    # Get the tankoubon first to get the list of archives
+    my %tankoubon = get_tankoubon($tankid);
+    return 0 unless %tankoubon;
+
+    # Delete all archives in the tankoubon
+    foreach my $arcid (@{$tankoubon{archives}}) {
+        LANraragi::Model::Archive::delete_archive($arcid);
+    }
+
+    # Delete the tankoubon itself
+    return delete_tankoubon($tankid);
 }
 
 1;

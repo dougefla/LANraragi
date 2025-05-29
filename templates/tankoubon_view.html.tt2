@@ -306,6 +306,9 @@
                     <button class='stdbtn delete-btn' onclick='TankoubonView.deleteTankoubon()'>
                         <i class='fas fa-trash'></i> [% c.lh("Delete") %]
                     </button>
+                    <button class='stdbtn delete-btn' onclick='TankoubonView.deleteTankoubon(true)' style="background-color: #b71c1c;">
+                        <i class='fas fa-trash-alt'></i> [% c.lh("Delete (All)") %]
+                    </button>
                 </div>
             </div>
         </div>

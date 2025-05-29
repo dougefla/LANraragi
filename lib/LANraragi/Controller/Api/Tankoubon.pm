@@ -69,8 +69,14 @@ sub update_tankoubon {
 sub delete_tankoubon {
     my $self = shift;
     my $tankid = $self->stash('id');
+    my $delete_archives = $self->param('delete_archives');
 
-    my $result = LANraragi::Model::Tankoubon::delete_tankoubon($tankid);
+    my $result;
+    if ($delete_archives) {
+        $result = LANraragi::Model::Tankoubon::delete_tankoubon_and_archives($tankid);
+    } else {
+        $result = LANraragi::Model::Tankoubon::delete_tankoubon($tankid);
+    }
 
     if ($result) {
         render_api_response($self, "delete_tankoubon");

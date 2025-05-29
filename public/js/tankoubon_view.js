@@ -525,26 +525,30 @@ window.TankoubonView = {
     /**
      * Delete the current tankoubon
      */
-    deleteTankoubon: function() {
+    deleteTankoubon: function(deleteArchives = false) {
         const tankId = window.location.pathname.split('/').pop();
         
         LRR.showPopUp({
-            title: "Delete Tankoubon",
-            text: "Are you sure you want to delete this tankoubon? This action cannot be undone.",
+            title: deleteArchives ? "Delete Tankoubon and Archives" : "Delete Tankoubon",
+            text: deleteArchives ? 
+                "Are you sure you want to delete this tankoubon AND all archives inside it? This action cannot be undone!" :
+                "Are you sure you want to delete this tankoubon? This action cannot be undone.",
             icon: "warning",
             showCancelButton: true,
             confirmButtonColor: "#d33",
-            confirmButtonText: "Delete"
+            confirmButtonText: deleteArchives ? "Delete All" : "Delete"
         }).then((result) => {
             if (result.isConfirmed) {
                 $.ajax({
-                    url: "../api/tankoubons/" + tankId,
+                    url: deleteArchives ? 
+                        "../api/tankoubons/" + tankId + "?delete_archives=1" :
+                        "../api/tankoubons/" + tankId,
                     type: "DELETE",
                     success: function(data) {
                         if (data.success) {
                             LRR.toast({
                                 heading: "Success!",
-                                text: "Tankoubon deleted!",
+                                text: deleteArchives ? "Tankoubon and all its archives have been deleted!" : "Tankoubon deleted!",
                                 icon: "success"
                             });
                             // Redirect back to tankoubon list

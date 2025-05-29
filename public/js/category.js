@@ -21,6 +21,7 @@ Category.initializeAll = function () {
     $(document).on("click.new-dynamic", "#new-dynamic", () => Category.addNewCategory(true));
     $(document).on("click.predicate-help", "#predicate-help", Category.predicateHelp);
     $(document).on("click.delete", "#delete", Category.deleteSelectedCategory);
+    $(document).on("click.delete-all", "#delete-all", Category.deleteAllCategories);
     $(document).on("click.return", "#return", () => { window.location.href = new LRR.apiURL("/"); });
 
 };
@@ -226,6 +227,57 @@ Category.deleteSelectedCategory = function () {
                     Category.loadCategories();
                 },
             );
+        }
+    });
+};
+
+Category.deleteAllCategories = function () {
+    LRR.showPopUp({
+        text: I18N.CategoryDeleteAllConfirm,
+        icon: "warning",
+        showCancelButton: true,
+        focusConfirm: false,
+        confirmButtonText: I18N.ConfirmYes,
+        reverseButtons: true,
+        confirmButtonColor: "#d33",
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Get all categories
+            fetch(new LRR.apiURL("/api/categories"))
+                .then((response) => response.json())
+                .then((categories) => {
+                    // Create an array of promises for deleting each category
+                    const deletePromises = categories.map(category => 
+                        fetch(new LRR.apiURL(`/api/categories/${category.id}`), { method: 'DELETE' })
+                    );
+
+                    // Execute all delete operations
+                    Promise.all(deletePromises)
+                        .then(() => {
+                            LRR.toast({
+                                heading: I18N.CategoryDeleteAllSuccess,
+                                icon: "success"
+                            });
+                            // Reload categories to update the UI
+                            Category.loadCategories();
+                        })
+                        .catch((error) => {
+                            console.error("Error deleting categories:", error);
+                            LRR.toast({
+                                heading: I18N.CategoryDeleteAllError,
+                                text: error,
+                                icon: "error"
+                            });
+                        });
+                })
+                .catch((error) => {
+                    console.error("Error fetching categories:", error);
+                    LRR.toast({
+                        heading: I18N.CategoryDeleteAllError,
+                        text: error,
+                        icon: "error"
+                    });
+                });
         }
     });
 };

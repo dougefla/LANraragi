@@ -261,13 +261,17 @@
 									case "delete":
 										Tankoubon.deleteTankoubon(archiveId);
 										break;
+									case "delete_all":
+										Tankoubon.deleteTankoubonAndArchives(archiveId);
+										break;
 								}
 							},
 							items: {
 								"view": {name: "[% c.lh('View Details') %]", icon: "fas fa-book"},
 								[% IF userlogged %]
 								"edit": {name: "[% c.lh('Edit Name') %]", icon: "fas fa-edit"},
-								"delete": {name: "[% c.lh('Delete') %]", icon: "fas fa-trash"}
+								"delete": {name: "[% c.lh('Delete') %]", icon: "fas fa-trash"},
+								"delete_all": {name: "[% c.lh('Delete Tankoubon (All)') %]", icon: "fas fa-trash-alt"}
 								[% END %]
 							}
 						};
@@ -333,6 +337,10 @@
 																success: function (data) {
 																	if (data.success) {
 																		Tankoubon.addArchive(data.tankoubon_id, archiveId);
+																		// Redraw the datatable to reflect changes
+																		if (IndexTable.dataTable.ajax) {
+																			IndexTable.dataTable.ajax.reload();
+																		}
 																	} else {
 																		LRR.showErrorToast("Error creating tankoubon: " + data.error);
 																	}
@@ -342,23 +350,7 @@
 													});
 												} else {
 													// Add to existing tankoubon
-													$.ajax({
-														url: "api/tankoubons/" + result.value + "/archives/" + archiveId,
-														type: "PUT",
-														success: function (data) {
-															if (data.success) {
-																LRR.toast({
-																	heading: "Success!",
-																	text: data.message,
-																	icon: "success"
-																});
-																// Update tankobon tags after adding archive
-																TankoubonView.updateTankoubonTags(result.value);
-															} else {
-																LRR.showErrorToast("Error adding archive: " + data.error);
-															}
-														}
-													});
+													Tankoubon.addArchive(result.value, archiveId);
 												}
 											}
 										});
