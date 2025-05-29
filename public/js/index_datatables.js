@@ -89,10 +89,7 @@ IndexTable.initializeAll = function () {
             url: "search",
             cache: true,
             data: function(d) {
-                // Add custom parameter based on checkbox state
-                const groupTanks = $("#group-tanks").prop("checked");
-                d.groupby_tanks = groupTanks ? "true" : "false";
-                console.log("DataTables request data with custom params:", d);
+                console.log("DataTables request data:", d);
                 return d;
             }
         },

@@ -319,7 +319,6 @@ Index.promptCustomColumn = function (column) {
 Index.updateTableControls = function (currentSort, currentOrder, totalPages, currentPage) {
     $(".table-options").show();
     $("#thumbnail-crop")[0].checked = localStorage.cropthumbs === "true";
-    $("#group-tanks")[0].checked = localStorage.grouptanks !== "false"; // Default to true if not set
 
     $("#namespace-sortby").val(currentSort);
     $("#order-sortby")[0].classList.remove("fa-sort-alpha-down", "fa-sort-alpha-up");
@@ -1075,9 +1074,9 @@ Index.loadContextMenuTankoubons = function (arcid) {
     return items;
 };
 
-// Add event handler for group-tanks checkbox
-$(document).on("change", "#group-tanks", function() {
-    localStorage.grouptanks = this.checked;
+// Add event handler for thumbnail-crop checkbox
+$(document).on("change", "#thumbnail-crop", function() {
+    localStorage.cropthumbs = this.checked;
     IndexTable.dataTable.ajax.reload();
 });
 
