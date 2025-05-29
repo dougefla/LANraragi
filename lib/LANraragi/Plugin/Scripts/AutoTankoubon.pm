@@ -71,13 +71,50 @@ sub detect_language {
     }
 }
 
+# Helper function for natural sorting
+sub natural_sort_key {
+    my ($str) = @_;
+    return "" unless defined $str;
+    
+    # Split string into chunks of numbers and non-numbers
+    my @chunks = split /(\d+)/, $str;
+    
+    # Pad numbers with zeros for proper sorting
+    for my $chunk (@chunks) {
+        if ($chunk =~ /^\d+$/) {
+            $chunk = sprintf("%09d", $chunk);
+        }
+    }
+    
+    return join "", @chunks;
+}
+
 # Helper function to extract series name from a title
 sub extract_series_name {
     my ($title) = @_;
     return "" unless defined $title;
     
+    my $logger = get_plugin_logger();
+    $logger->debug("Extracting series name from title: $title");
+    
     # Detect the primary language
     my $lang = detect_language($title);
+    
+    # Return empty string if title is just a number or mostly numbers
+    if ($title =~ /^\s*\d+\s*$/ || $title =~ /^\s*[0-9０-９一二三四五六七八九十]+\s*$/) {
+        $logger->debug("Title appears to be just a number, skipping: $title");
+        return "";
+    }
+    
+    # For titles starting with numbers, ensure there are at least 2 meaningful characters after
+    if ($title =~ /^\s*(?:[0-9０-９一二三四五六七八九十]+)/) {
+        # Check if there are at least 2 non-number, non-symbol characters after the numbers
+        unless ($title =~ /^\s*(?:[0-9０-９一二三四五六七八九十]+)(?:[^\w\s]|\s)*([^\d\s\p{P}]{2,})/) {
+            $logger->debug("Title starts with numbers but doesn't have enough meaningful characters after: $title");
+            return "";
+        }
+        $logger->debug("Title starts with numbers but has enough meaningful characters after");
+    }
     
     if ($lang eq 'jp' || $lang eq 'cn') {
         # For Japanese/Chinese titles:
@@ -94,13 +131,54 @@ sub extract_series_name {
             }
             
             # Return the full series name with brackets and subtitle
-            return "『${base_name}』" . ($subtitle ? " ${subtitle}" : "");
+            my $series_name = "『${base_name}』" . ($subtitle ? " ${subtitle}" : "");
+            $logger->debug("Extracted series name (with brackets): $series_name");
+            return $series_name;
         }
         
-        # If no 『』, try to match the base series name by looking for common number patterns
-        if ($title =~ /^(.+?)(?:[0-9０-９一二三四五六七八九十]+|\s*[0-9０-９一二三四五六七八九十]+|\s*第[0-9０-９一二三四五六七八九十]+[巻話]|\s*[（\(][0-9０-９一二三四五六七八九十]+[\)）]|$)/) {
+        # If no 『』, try to match the base series name
+        # First try to match series name before number + 「」quotes pattern
+        if ($title =~ /^(.+?)[0-9０-９一二三四五六七八九十]+「/) {
             my $base_name = $1;
             $base_name =~ s/\s+$//; # Remove trailing whitespace
+            
+            # Skip if base_name is just a number
+            if ($base_name =~ /^\s*[0-9０-９一二三四五六七八九十]+\s*$/) {
+                $logger->debug("Base name is just a number, skipping: $base_name");
+                return "";
+            }
+            
+            $logger->debug("Extracted base series name (before number and quotes): $base_name");
+            return $base_name;
+        }
+        
+        # Then try to match by removing trailing numbers for Chinese titles
+        if ($title =~ /^(.+?)[0-9０-９一二三四五六七八九十]+$/) {
+            my $base_name = $1;
+            $base_name =~ s/\s+$//; # Remove trailing whitespace
+            
+            # Skip if base_name is just a number
+            if ($base_name =~ /^\s*[0-9０-９一二三四五六七八九十]+\s*$/) {
+                $logger->debug("Base name is just a number, skipping: $base_name");
+                return "";
+            }
+            
+            $logger->debug("Extracted base series name (with trailing number): $base_name");
+            return $base_name;
+        }
+        
+        # If no trailing number, match everything up to the first space or Japanese/Chinese punctuation
+        if ($title =~ /^(.+?)(?:[　\s]|\p{P}|[、。！？]|$)/) {
+            my $base_name = $1;
+            $base_name =~ s/\s+$//; # Remove trailing whitespace
+            
+            # Skip if base_name is just a number
+            if ($base_name =~ /^\s*[0-9０-９一二三四五六七八九十]+\s*$/) {
+                $logger->debug("Base name is just a number, skipping: $base_name");
+                return "";
+            }
+            
+            $logger->debug("Extracted base series name: $base_name");
             return $base_name;
         }
         
@@ -119,6 +197,14 @@ sub extract_series_name {
         if ($title =~ /^(.+?)(?:\s+(?:vol\.?|chapter|ch\.?|part)?\s*[0-9]+|\s*[0-9]+(?:st|nd|rd|th)|\s*\([0-9]+\)|\s*$)/i) {
             my $base_name = $1;
             $base_name =~ s/\s+$//; # Remove trailing whitespace
+            
+            # Skip if base_name is just a number
+            if ($base_name =~ /^\s*\d+\s*$/) {
+                $logger->debug("Base name is just a number, skipping: $base_name");
+                return "";
+            }
+            
+            $logger->debug("Extracted base series name: $base_name");
             return $base_name;
         }
         
@@ -132,6 +218,13 @@ sub extract_series_name {
     $title =~ s/^\s+|\s+$//g;
     $title =~ s/\s+/ /g;
     
+    # Final check - don't return if just a number
+    if ($title =~ /^\s*[0-9０-９一二三四五六七八九十]+\s*$/) {
+        $logger->debug("Final title is just a number, skipping: $title");
+        return "";
+    }
+    
+    $logger->debug("Final extracted series name: $title");
     return $title;
 }
 
@@ -239,7 +332,7 @@ sub run_script {
                 next unless $archive && ref($archive) eq 'HASH';  # Skip if archive data is invalid
                 
                 my $id = $archive->{arcid};
-                my $title = $archive->{title} || $archive->{name};  # Fallback to name if title is not set
+                my $title = $archive->{title};
                 my $tags = $archive->{tags} || "";
                 
                 next unless $id && $title;  # Skip if missing required data
@@ -262,12 +355,11 @@ sub run_script {
                 # Initialize array if not exists
                 $series{$series_name} = [] unless exists $series{$series_name};
                 
-                # Store archive info with title
+                # Store archive info
                 push @{$series{$series_name}}, {
                     id => $id,
                     title => $title,
-                    number => extract_number($title),
-                    tags => $tags
+                    number => extract_number($title)
                 };
                 
                 $processed_count++;
@@ -285,14 +377,19 @@ sub run_script {
             eval {
                 next unless $series_name;  # Skip empty series names
                 next unless exists $series{$series_name} && ref($series{$series_name}) eq 'ARRAY';
+                next unless length($series_name) >= 3;  # Skip series names shorter than 3 characters
                 
                 my @archives = @{$series{$series_name}};
                 next unless @archives > 1;  # Only create tankoubon if there are multiple archives
                 
                 $logger->info("Creating tankoubon for series: $series_name with " . scalar(@archives) . " archives");
                 
-                # Sort archives by number
-                @archives = sort { $a->{number} <=> $b->{number} } @archives;
+                # Sort archives by natural sort of title if numbers are the same
+                @archives = sort { 
+                    my $num_diff = $a->{number} <=> $b->{number};
+                    return $num_diff if $num_diff != 0;
+                    return natural_sort_key($a->{title}) cmp natural_sort_key($b->{title});
+                } @archives;
                 
                 # Create tankoubon - pass undef as second argument since we're creating a new one
                 my $tank_id = LANraragi::Model::Tankoubon::create_tankoubon($series_name, undef);
@@ -337,7 +434,7 @@ sub run_script {
                     my $metadata = {
                         metadata => {
                             tags => $first_archive->{tags} || "",
-                            summary => "Tankoubon containing: " . join(", ", map { $_->{title} } @archives)
+                            summary => "Tankoubon containing " . scalar(@archives) . " archives"
                         },
                         cover_archive => $first_archive->{id}
                     };
@@ -348,7 +445,7 @@ sub run_script {
                     }
                 }
                 
-                $logger->info("Successfully created tankoubon for series: $series_name with titles: " . join(", ", map { $_->{title} } @archives));
+                $logger->info("Successfully created tankoubon for series: $series_name");
             };
             if ($@) {
                 $logger->warn("Error creating tankoubon for series $series_name: $@");
