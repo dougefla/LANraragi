@@ -18,65 +18,82 @@ our $VERSION = '1.0';
 no warnings 'redefine';
 
 sub get_tankoubon_list {
+
     my $self = shift;
-    my ($total, $filtered, @tanks) = LANraragi::Model::Tankoubon::get_tankoubon_list;
-    $self->render(json => \@tanks);
+    my $req  = $self->req;
+
+    my $page = $req->param('page');
+
+    my ( $total, $filtered, @rgs ) = LANraragi::Model::Tankoubon::get_tankoubon_list($page);
+
+    $self->render( json => { result => \@rgs, total => $total, filtered => $filtered } );
 }
 
 sub get_tankoubon {
-    my $self = shift;
-    my $tankid = $self->stash('id');
-    my %tankoubon = LANraragi::Model::Tankoubon::get_tankoubon($tankid);
+
+    my $self    = shift;
+    my $tank_id = $self->stash('id');
+    my $req     = $self->req;
+
+    my $fulldata = $req->param('include_full_data');
+    my $page     = $req->param('page');
+
+    my ( $total, $filtered, %tankoubon ) = LANraragi::Model::Tankoubon::get_tankoubon( $tank_id, $fulldata, $page );
 
     unless (%tankoubon) {
-        render_api_response($self, "get_tankoubon", "The given tankoubon does not exist.");
+        render_api_response( $self, "get_tankoubon", "The given tankoubon does not exist." );
         return;
     }
 
-    $self->render(json => \%tankoubon);
+    $self->render( json => { result => \%tankoubon, total => $total, filtered => $filtered } );
 }
 
 sub create_tankoubon {
-    my $self = shift;
-    my $name = $self->req->param('name') || "";
 
-    if ($name eq "") {
-        render_api_response($self, "create_tankoubon", "Tankoubon name not specified.");
+    my $self   = shift;
+    my $name   = $self->req->param('name')   || "";
+    my $tankid = $self->req->param('tankid') || "";
+
+    if ( $name eq "" ) {
+        render_api_response( $self, "create_tankoubon", "Tankoubon name not specified." );
         return;
     }
 
-    my $created_id = LANraragi::Model::Tankoubon::create_tankoubon($name, "");
+    my $created_id = LANraragi::Model::Tankoubon::create_tankoubon( $name, $tankid );
     $self->render(
         json => {
-            operation => "create_tankoubon",
+            operation    => "create_tankoubon",
             tankoubon_id => $created_id,
-            success => 1
+            success      => 1
         }
     );
 }
 
 sub update_tankoubon {
-    my $self = shift;
+
+    my $self   = shift;
     my $tankid = $self->stash('id');
     my %tankoubon = LANraragi::Model::Tankoubon::get_tankoubon($tankid);
 
     unless (%tankoubon) {
-        render_api_response($self, "update_tankoubon", "The given tankoubon does not exist.");
+        render_api_response( $self, "update_tankoubon", "The given tankoubon does not exist." );
         return;
     }
 
-    my $json = $self->req->json;
-    my ($result, $err) = LANraragi::Model::Tankoubon::update_tankoubon($tankid, $json);
+    my $data = $self->req->json;
+    my ( $result, $err ) = LANraragi::Model::Tankoubon::update_tankoubon( $tankid, $data );
 
     if ($result) {
-        render_api_response($self, "update_tankoubon", undef, "Updated tankoubon \"$tankoubon{name}\"!");
+        my $successMessage = "Updated tankoubon \"$tankoubon{name}\"!";
+        render_api_response( $self, "update_tankoubon", undef, $successMessage );
     } else {
-        render_api_response($self, "update_tankoubon", $err);
+        render_api_response( $self, "update_tankoubon", $err );
     }
 }
 
 sub delete_tankoubon {
-    my $self = shift;
+
+    my $self   = shift;
     my $tankid = $self->stash('id');
     my $delete_archives = $self->param('delete_archives');
 
@@ -88,53 +105,55 @@ sub delete_tankoubon {
     }
 
     if ($result) {
-        render_api_response($self, "delete_tankoubon");
+        render_api_response( $self, "delete_tankoubon" );
     } else {
-        render_api_response($self, "delete_tankoubon", "The given tankoubon does not exist.");
+        render_api_response( $self, "delete_tankoubon", "The given tankoubon does not exist." );
     }
 }
 
 sub add_to_tankoubon {
-    my $self = shift;
-    my $tankid = $self->stash('id');
-    my $arcid = $self->stash('archive');
 
-    my ($result, $err) = LANraragi::Model::Tankoubon::add_to_tankoubon($tankid, $arcid);
+    my $self   = shift;
+    my $tankid = $self->stash('id');
+    my $arcid  = $self->stash('archive');
+
+    my ( $result, $err ) = LANraragi::Model::Tankoubon::add_to_tankoubon( $tankid, $arcid );
 
     if ($result) {
-        my $successMessage = "Added $arcid to Tankoubon $tankid!";
-        my %tankoubon = LANraragi::Model::Tankoubon::get_tankoubon($tankid);
-        my $title = LANraragi::Model::Archive::get_title($arcid);
+        my $successMessage = "Added $arcid to tankoubon $tankid!";
+        my %tankoubon      = LANraragi::Model::Tankoubon::get_tankoubon($tankid);
+        my $title          = LANraragi::Model::Archive::get_title($arcid);
 
-        if (%tankoubon && defined($title)) {
+        if ( %tankoubon && defined($title) ) {
             $successMessage = "Added \"$title\" to tankoubon \"$tankoubon{name}\"!";
         }
 
-        render_api_response($self, "add_to_tankoubon", undef, $successMessage);
+        render_api_response( $self, "add_to_tankoubon", undef, $successMessage );
     } else {
-        render_api_response($self, "add_to_tankoubon", $err);
+        render_api_response( $self, "add_to_tankoubon", $err );
     }
 }
 
 sub remove_from_tankoubon {
-    my $self = shift;
-    my $tankid = $self->stash('id');
-    my $arcid = $self->stash('archive');
 
-    my ($result, $err) = LANraragi::Model::Tankoubon::remove_from_tankoubon($tankid, $arcid);
+    my $self   = shift;
+    my $tankid = $self->stash('id');
+    my $arcid  = $self->stash('archive');
+
+    my ( $result, $err ) = LANraragi::Model::Tankoubon::remove_from_tankoubon( $tankid, $arcid );
 
     if ($result) {
-        my $successMessage = "Removed $arcid from Tankoubon $tankid!";
-        my %tankoubon = LANraragi::Model::Tankoubon::get_tankoubon($tankid);
-        my $title = LANraragi::Model::Archive::get_title($arcid);
+        my $successMessage = "Removed $arcid from tankoubon $tankid!";
+        my %tankoubon      = LANraragi::Model::Tankoubon::get_tankoubon($tankid);
+        my $title          = LANraragi::Model::Archive::get_title($arcid);
 
-        if (%tankoubon && defined($title)) {
+        if ( %tankoubon && defined($title) ) {
             $successMessage = "Removed \"$title\" from tankoubon \"$tankoubon{name}\"!";
         }
 
-        render_api_response($self, "remove_from_tankoubon", undef, $successMessage);
+        render_api_response( $self, "remove_from_tankoubon", undef, $successMessage );
     } else {
-        render_api_response($self, "remove_from_tankoubon", $err);
+        render_api_response( $self, "remove_from_tankoubon", $err );
     }
 }
 
