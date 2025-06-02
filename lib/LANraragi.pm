@@ -218,10 +218,6 @@ sub startup {
 
     LANraragi::Utils::Routing::apply_routes($self);
     $self->LRR_LOGGER->info("Routing done! Ready to receive requests.");
-
-    # Category routes
-    $self->routes->get('/config/categories')->to('category#index');
-    $self->routes->get('/category_grid')->to('CategoryGrid#index');
 }
 
 sub shutdown_from_pid {
