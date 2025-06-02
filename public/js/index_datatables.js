@@ -225,10 +225,20 @@ IndexTable.renderTitle = function (data, type) {
             const bookmarkIcon = !isTankoubon && !isSelectable ? LRR.buildBookmarkIconElement(id, "title-bookmark-icon") : '';
             const titleLink = isSelectable ? title : `<a href="${url}" style="text-decoration:none; color:inherit;">${title}</a>`;
             const isSelected = IndexTable.selectedArchives.includes(id);
+            
+            // Add thumbnail in list mode when in selection mode
+            const thumbnailHtml = isSelectable ? 
+                `<div class="list-thumbnail" style="display: inline-block; margin-right: 10px; vertical-align: middle;">
+                    <img src="${new LRR.apiURL(`/api/archives/${id}/thumbnail`).toString()}" 
+                         style="height: 50px; width: auto; border-radius: 4px;"
+                         onerror="this.src='${new LRR.apiURL("/img/noThumb.png")}'"/>
+                </div>` : '';
+            
             return `<div id="${id}" class="${isTankoubon ? 'tankobon-item' : 'context-menu'} ${isSelectable ? 'selectable' : ''} ${isSelected ? 'selected' : ''}">
                         <div style="text-align:left; display:block; text-decoration:none; color:inherit;">
                             ${bookmarkIcon}
                             ${checkbox}
+                            ${thumbnailHtml}
                             ${titleLink}
                         </div>
                     </div>`;

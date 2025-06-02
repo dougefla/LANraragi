@@ -20,8 +20,8 @@ sub plugin_info {
         name        => "Auto Tankoubon Creator",
         type        => "script",
         namespace   => "autotankoubon",
-        author      => "ChatGPT",
-        version     => "1.1",
+        author      => "Douge",
+        version     => "1.2",
         description => "Automatically creates tankoubons by analyzing archive titles and metadata to detect series. " .
                       "Supports titles in English, Japanese, and Chinese. " .
                       "Archives that appear to belong to the same series will be grouped into a tankoubon.",
@@ -377,7 +377,7 @@ sub run_script {
             eval {
                 next unless $series_name;  # Skip empty series names
                 next unless exists $series{$series_name} && ref($series{$series_name}) eq 'ARRAY';
-                next unless length($series_name) >= 3;  # Skip series names shorter than 3 characters
+                next unless length($series_name) >= 2;  # Skip series names shorter than 3 characters
                 
                 my @archives = @{$series{$series_name}};
                 next unless @archives > 1;  # Only create tankoubon if there are multiple archives
