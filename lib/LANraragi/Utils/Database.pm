@@ -24,7 +24,7 @@ use LANraragi::Utils::Archive qw(get_filelist);
 use LANraragi::Utils::Logging qw(get_logger);
 
 # Metadata fields for tankoubons and their scores in the sorted set
-our %TANK_METADATA = ( "name" => 0, "summary" => -1, "tags" => -2, "cover_archive" => -3 );
+our %TANK_METADATA = ( "name" => 0, "summary" => -1, "tags" => -2, "cover_archive" => -3, "last_updated" => -4 );
 
 # Functions for interacting with the DB Model.
 use Exporter 'import';
@@ -276,6 +276,14 @@ sub build_tank_json($id) {
     my $redis = LANraragi::Model::Config->get_redis;
     my $archive_count = $redis->zcount($id, 1, "+inf");
 
+    # Get last_updated timestamp
+    my @last_updated = $redis->zrangebyscore($id, $TANK_METADATA{"last_updated"}, $TANK_METADATA{"last_updated"}, qw{LIMIT 0 1});
+    my $last_updated = 0;
+    if (@last_updated) {
+        my $last_updated_str = redis_decode($last_updated[0]);
+        ($last_updated) = $last_updated_str =~ /last_updated_(\d+)/;
+    }
+
     my $arcdata = {
         arcid        => $id,
         title       => $tank_name,
@@ -290,7 +298,8 @@ sub build_tank_json($id) {
         lastreadtime => max(map { ${$_}{lastreadtime} } @{$tank{full_data}}),
         size         => sum(map { ${$_}{size} } @{$tank{full_data}}),
         cover_archive => $tank{cover_archive},
-        archive_count => $archive_count
+        archive_count => $archive_count,
+        last_updated => $last_updated
     };
 
     return $arcdata;

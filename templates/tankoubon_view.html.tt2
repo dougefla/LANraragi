@@ -69,9 +69,17 @@
             background: #2a2a2a;
             border-radius: 4px;
             justify-content: center;
-            max-width: 600px;
+            max-width: 800px;
             margin-left: auto;
             margin-right: auto;
+        }
+
+        .episode-nav-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            justify-content: center;
+            width: 100%;
         }
 
         .episode-nav-item {
@@ -147,6 +155,45 @@
             border-color: rgba(0, 0, 0, 0.8) transparent transparent transparent;
         }
 
+        .episode-nav-ellipsis {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 14px;
+            padding: 0 8px;
+        }
+
+        .episode-nav-expand {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 8px;
+            margin-top: 8px;
+            background: #363940;
+            border-radius: 3px;
+            color: #fff;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid #4f535b;
+        }
+
+        .episode-nav-expand:hover {
+            background: #4f535b;
+        }
+
+        .episode-nav-expand i {
+            font-size: 12px;
+            transition: transform 0.2s ease;
+        }
+
+        .episode-nav-expand:hover i {
+            transform: translateY(2px);
+        }
+
         .tankoubon-actions {
             display: flex;
             flex-wrap: wrap;
@@ -191,8 +238,8 @@
         .archive-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-            gap: 2px;
-            padding: 2px;
+            gap: 8px;
+            padding: 8px;
         }
 
         .archive-card {
@@ -209,7 +256,6 @@
             position: relative;
             display: flex;
             flex-direction: column;
-            justify-content: flex-start;
         }
 
         .archive-card:hover {
@@ -413,6 +459,90 @@
             font-weight: bold;
             src: url(../css/webfonts/Geist-SemiBold.woff2) format("woff2");
         }
+
+        .pagination-controls {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin: 10px;
+            padding: 10px;
+            background: #2a2a2a;
+            border-radius: 4px;
+        }
+
+        .pagination-controls .page-nav {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .pagination-controls .page-nav button {
+            padding: 4px 8px;
+            border-radius: 4px;
+            background: #363940;
+            color: #fff;
+            border: 1px solid #4f535b;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            min-width: 32px;
+            justify-content: center;
+        }
+
+        .pagination-controls .page-nav button:hover:not(:disabled) {
+            background: #4f535b;
+        }
+
+        .pagination-controls .page-nav button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .pagination-controls select {
+            padding: 4px 8px;
+            border-radius: 4px;
+            background: #363940;
+            color: #fff;
+            border: 1px solid #4f535b;
+            min-width: 70px;
+        }
+
+        .pagination-controls label {
+            color: #999;
+            font-size: 0.9em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .pagination-info {
+            color: #999;
+            font-size: 0.9em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .empty-message, .error-message, .loading-indicator {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+            background: #2a2a2a;
+            border-radius: 4px;
+            margin: 10px;
+        }
+
+        .error-message {
+            color: #dc3545;
+        }
+
+        .empty-message i, .error-message i, .loading-indicator i {
+            margin-bottom: 15px;
+            color: inherit;
+        }
     </style>
 
     [% csshead %]
@@ -482,6 +612,12 @@
                 <h2 class='tankoubon-title'>[% tank.name %]</h2>
                 <div class='tankoubon-stats'>
                     <div>[% tank.archives.size %] Archives</div>
+                    [% IF tank.last_updated %]
+                    <div style="margin-top: 10px;">
+                        <span style="color: #999;">Last Updated:</span>
+                        <span>[% USE date %][% date.format(tank.last_updated, '%Y-%m-%d %H:%M:%S') %]</span>
+                    </div>
+                    [% END %]
                     [% IF tank.tags %]
                     <div style="margin-top: 10px;">
                         <span style="color: #999;">Tags:</span>
@@ -512,9 +648,70 @@
             </div>
         </div>
 
-        <div id='archives-container'>
-            <!-- Archives will be loaded here by JavaScript -->
-            <i class='fa fa-4x fa-compact-disc fa-spin' style='margin: 20px'></i>
+        <div class="pagination-controls">
+            <div class="pagination-info">
+                [% c.lh("Showing") %] <span id="showing-count">0</span> [% c.lh("of") %] <span id="total-count">0</span> [% c.lh("archives") %]
+            </div>
+            <div class="page-nav">
+                <button id="first-page" class="favtag-btn" title="[% c.lh('First Page') %]">1</button>
+                <button id="prev-page" class="favtag-btn" title="[% c.lh('Previous Page') %]">
+                    <i class="fas fa-angle-left"></i>
+                </button>
+                <select id="page-select" class="favtag-btn"></select>
+                <button id="next-page" class="favtag-btn" title="[% c.lh('Next Page') %]">
+                    <i class="fas fa-angle-right"></i>
+                </button>
+                <button id="last-page" class="favtag-btn" title="[% c.lh('Last Page') %]">
+                    <span id="last-page-number">1</span>
+                </button>
+            </div>
+            <div class="page-size">
+                <label>
+                    [% c.lh("Items per page:") %]
+                    <select id="items-per-page" class="favtag-btn">
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                        <option value="200">200</option>
+                    </select>
+                </label>
+            </div>
+        </div>
+
+        <div id="archives-container"></div>
+
+        <div class="pagination-controls">
+            <div class="pagination-info">
+                [% c.lh("Showing") %] <span id="showing-count-bottom">0</span> [% c.lh("of") %] <span id="total-count-bottom">0</span> [% c.lh("archives") %]
+            </div>
+            <div class="page-nav">
+                <button id="first-page-bottom" class="favtag-btn" title="[% c.lh('First Page') %]">1</button>
+                <button id="prev-page-bottom" class="favtag-btn" title="[% c.lh('Previous Page') %]">
+                    <i class="fas fa-angle-left"></i>
+                </button>
+                <select id="page-select-bottom" class="favtag-btn"></select>
+                <button id="next-page-bottom" class="favtag-btn" title="[% c.lh('Next Page') %]">
+                    <i class="fas fa-angle-right"></i>
+                </button>
+                <button id="last-page-bottom" class="favtag-btn" title="[% c.lh('Last Page') %]">
+                    <span id="last-page-number-bottom">1</span>
+                </button>
+            </div>
+            <div class="page-size">
+                <label>
+                    [% c.lh("Items per page:") %]
+                    <select id="items-per-page-bottom" class="favtag-btn">
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                        <option value="200">200</option>
+                    </select>
+                </label>
+            </div>
+        </div>
+
+        <div id="loading-indicator" style="display: none;">
+            <i class="fa fa-4x fa-spinner fa-spin"></i>
         </div>
 
         <br><br>

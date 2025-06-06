@@ -1,0 +1,30 @@
+# Tankoubon-related translations
+msgid "Tankoubons"
+msgstr "单行本"
+
+msgid "Tankoubon Management"
+msgstr "单行本管理"
+
+msgid "Return"
+msgstr "返回"
+
+msgid "Name"
+msgstr "名称"
+
+msgid "Date Added"
+msgstr "添加日期"
+
+msgid "Last Updated"
+msgstr "最后更新"
+
+msgid "Archive Count"
+msgstr "档案数量"
+
+msgid "Items per page:"
+msgstr "每页项目数："
+
+msgid "Page:"
+msgstr "页码："
+
+msgid "No tankoubons found."
+msgstr "未找到单行本。" 

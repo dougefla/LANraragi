@@ -2,15 +2,107 @@
  * Tankoubon View Operations
  */
 window.TankoubonView = {
+    currentPage: 0,
+    itemsPerPage: parseInt(localStorage.getItem('tankoubon-view-page-size') || '100'),
+    totalArchives: 0,
+    archives: [],
+    allArchives: [], // Store all archives for episode navigation
+    isEpisodeNavExpanded: false, // Track if episode nav is expanded
+    maxVisibleEpisodes: 20, // Maximum number of episodes to show in compact view
+
     /**
      * Initialize the page
      */
     initializeAll: function () {
-        // Load archives on page load
-        this.loadArchives();
+        // Parse URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const pageParam = urlParams.get('page');
+        const sizeParam = urlParams.get('size');
+        
+        console.log('URL parameters:', { page: pageParam, size: sizeParam });
+        
+        if (pageParam !== null) {
+            this.currentPage = parseInt(pageParam);
+        }
+        if (sizeParam !== null) {
+            this.itemsPerPage = parseInt(sizeParam);
+            localStorage.setItem('tankoubon-view-page-size', this.itemsPerPage);
+        }
 
-        // Initialize episode navigation
-        this.initializeEpisodeNav();
+        console.log('Initial state:', {
+            currentPage: this.currentPage,
+            itemsPerPage: this.itemsPerPage
+        });
+
+        // Set initial value of items-per-page dropdowns
+        $('#items-per-page, #items-per-page-bottom').val(this.itemsPerPage);
+        
+        // Load all archives first for episode navigation
+        this.loadAllArchives(() => {
+            // Then load paginated archives
+            this.loadArchives();
+        });
+
+        // Add event listeners for pagination controls
+        $('#page-select, #page-select-bottom').on('change', (e) => {
+            this.currentPage = parseInt($(e.target).val()) - 1;
+            console.log('Page changed:', {
+                newPage: this.currentPage,
+                itemsPerPage: this.itemsPerPage
+            });
+            this.loadArchives();
+            
+            // Sync other page select
+            const otherSelect = e.target.id === 'page-select' ? '#page-select-bottom' : '#page-select';
+            $(otherSelect).val(this.currentPage + 1);
+        });
+
+        $('#items-per-page, #items-per-page-bottom').on('change', (e) => {
+            this.itemsPerPage = parseInt($(e.target).val());
+            localStorage.setItem('tankoubon-view-page-size', this.itemsPerPage);
+            this.currentPage = 0; // Reset to first page when changing items per page
+            console.log('Items per page changed:', {
+                newSize: this.itemsPerPage,
+                currentPage: this.currentPage
+            });
+            this.loadArchives();
+            
+            // Sync other items-per-page select
+            const otherSelect = e.target.id === 'items-per-page' ? '#items-per-page-bottom' : '#items-per-page';
+            $(otherSelect).val(this.itemsPerPage);
+        });
+
+        // Add event listeners for navigation buttons
+        const handleNavigation = (action) => {
+            const totalPages = Math.ceil(this.totalArchives / this.itemsPerPage);
+            let newPage = this.currentPage;
+
+            switch (action) {
+                case 'first':
+                    newPage = 0;
+                    break;
+                case 'prev':
+                    newPage = Math.max(0, this.currentPage - 1);
+                    break;
+                case 'next':
+                    newPage = Math.min(totalPages - 1, this.currentPage + 1);
+                    break;
+                case 'last':
+                    newPage = totalPages - 1;
+                    break;
+            }
+
+            if (newPage !== this.currentPage) {
+                this.currentPage = newPage;
+                this.loadArchives();
+            }
+        };
+
+        // Bind navigation buttons
+        $('#first-page, #first-page-bottom').on('click', () => handleNavigation('first'));
+        $('#prev-page, #prev-page-bottom').on('click', () => handleNavigation('prev'));
+        $('#next-page, #next-page-bottom').on('click', () => handleNavigation('next'));
+        $('#last-page, #last-page-bottom').on('click', () => handleNavigation('last'));
     },
 
     /**
@@ -41,22 +133,24 @@ window.TankoubonView = {
     },
 
     /**
-     * Initialize episode navigation
+     * Load all archives for episode navigation
      */
-    initializeEpisodeNav: function() {
+    loadAllArchives: function(callback) {
         const tankId = window.location.pathname.split('/').pop();
         const currentArchiveId = new URLSearchParams(window.location.search).get('id');
         
         $.ajax({
             url: "../api/tankoubons/" + tankId,
             type: "GET",
-            success: function(tank) {
-                if (!tank.archives || tank.archives.length === 0) {
+            data: { size: -1 }, // Request all archives
+            success: (response) => {
+                if (!response.archives || response.archives.length === 0) {
+                    if (callback) callback();
                     return;
                 }
 
                 // Load archive details
-                const archivePromises = tank.archives.map(archiveId =>
+                const archivePromises = response.archives.map(archiveId =>
                     $.ajax({
                         url: "../api/archives/" + archiveId,
                         type: "GET"
@@ -64,38 +158,145 @@ window.TankoubonView = {
                 );
 
                 Promise.all(archivePromises).then(archives => {
-                    let html = '';
-                    archives.forEach((archive, index) => {
-                        const isCurrent = archive.arcid === currentArchiveId;
-                        const progressClass = archive.progress ? 
-                            (archive.progress === 'completed' ? 'read' : 
-                             archive.progress === 'reading' ? 'reading' : '') : '';
-                        
-                        html += `
-                            <div class='episode-nav-item ${isCurrent ? 'current' : ''} ${progressClass}'
-                                 onclick='TankoubonView.jumpToEpisode("${archive.arcid}")'>
-                                ${index + 1}
-                                <div class='episode-nav-tooltip'>${archive.title}</div>
-                            </div>
-                        `;
-                    });
-                    $('#episode-nav').html(html);
+                    this.allArchives = archives;
+                    this.totalArchives = archives.length;
+                    this.updateEpisodeNav(currentArchiveId, tankId);
+                    if (callback) callback();
                 });
+            },
+            error: (xhr, status, error) => {
+                console.error('Error loading all archives:', error);
+                if (callback) callback();
             }
         });
     },
 
     /**
-     * Load archives for the current tankoubon
+     * Update episode navigation display
+     */
+    updateEpisodeNav: function(currentArchiveId, tankId) {
+        const archives = this.allArchives;
+        if (!archives || archives.length === 0) return;
+
+        const currentIndex = archives.findIndex(archive => archive.arcid === currentArchiveId);
+        let html = '<div class="episode-nav-container">';
+
+        // Function to create episode button HTML
+        const createEpisodeButton = (archive, index) => {
+            const isCurrent = archive.arcid === currentArchiveId;
+            const progressClass = archive.progress ? 
+                (archive.progress === 'completed' ? 'read' : 
+                 archive.progress === 'reading' ? 'reading' : '') : '';
+            
+            return `
+                <div class='episode-nav-item ${isCurrent ? 'current' : ''} ${progressClass}'
+                     onclick='window.location.href="../reader?id=${archive.arcid}&tank=${tankId}"'>
+                    ${index + 1}
+                    <div class='episode-nav-tooltip'>${archive.title}</div>
+                </div>
+            `;
+        };
+
+        if (archives.length > this.maxVisibleEpisodes && !this.isEpisodeNavExpanded) {
+            // Compact view
+            const visibleRange = 7; // Show 7 episodes around current
+            const startEpisodes = archives.slice(0, 3); // First 3
+            const endEpisodes = archives.slice(-3); // Last 3
+            
+            // Calculate range around current episode
+            let currentStart = Math.max(3, currentIndex - Math.floor(visibleRange/2));
+            let currentEnd = Math.min(archives.length - 3, currentStart + visibleRange);
+            currentStart = Math.max(3, currentEnd - visibleRange); // Adjust start if end was capped
+            
+            const middleEpisodes = archives.slice(currentStart, currentEnd);
+
+            // Add first episodes
+            startEpisodes.forEach((archive, i) => {
+                html += createEpisodeButton(archive, i);
+            });
+
+            // Add ellipsis if there's a gap
+            if (currentStart > startEpisodes.length) {
+                html += '<div class="episode-nav-ellipsis">...</div>';
+            }
+
+            // Add middle episodes around current
+            middleEpisodes.forEach((archive, i) => {
+                html += createEpisodeButton(archive, i + currentStart);
+            });
+
+            // Add ellipsis if there's a gap
+            if (currentEnd < archives.length - endEpisodes.length) {
+                html += '<div class="episode-nav-ellipsis">...</div>';
+            }
+
+            // Add last episodes
+            endEpisodes.forEach((archive, i) => {
+                html += createEpisodeButton(archive, archives.length - endEpisodes.length + i);
+            });
+
+            // Add expand button
+            html += `
+                <div class="episode-nav-expand" onclick="TankoubonView.toggleEpisodeNav()">
+                    <i class="fas fa-chevron-down"></i>
+                    Show All
+                </div>
+            `;
+        } else {
+            // Expanded view
+            archives.forEach((archive, index) => {
+                html += createEpisodeButton(archive, index);
+            });
+
+            // Add collapse button if expandable
+            if (archives.length > this.maxVisibleEpisodes) {
+                html += `
+                    <div class="episode-nav-expand" onclick="TankoubonView.toggleEpisodeNav()">
+                        <i class="fas fa-chevron-up"></i>
+                        Show Less
+                    </div>
+                `;
+            }
+        }
+
+        html += '</div>';
+        $('#episode-nav').html(html);
+    },
+
+    /**
+     * Toggle episode navigation between expanded and compact views
+     */
+    toggleEpisodeNav: function() {
+        this.isEpisodeNavExpanded = !this.isEpisodeNavExpanded;
+        const tankId = window.location.pathname.split('/').pop();
+        const currentArchiveId = new URLSearchParams(window.location.search).get('id');
+        this.updateEpisodeNav(currentArchiveId, tankId);
+    },
+
+    /**
+     * Load archives for the current page
      */
     loadArchives: function () {
         const tankId = window.location.pathname.split('/').pop();
         
+        // Show loading indicator
+        $('#archives-container').html('<div class="loading-indicator"><i class="fa fa-4x fa-spinner fa-spin"></i></div>');
+        
+        const params = {
+            page: this.currentPage,
+            size: this.itemsPerPage
+        };
+
+        console.log('Loading archives with params:', params);
+        
         $.ajax({
             url: "../api/tankoubons/" + tankId,
             type: "GET",
-            success: function(tank) {
-                if (!tank.archives || tank.archives.length === 0) {
+            data: params,
+            success: (response) => {
+                console.log('API response:', response);
+
+                if (!response.archives || response.archives.length === 0) {
                     $('#archives-container').html(
                         "<div class='empty-message'>" +
                         "<i class='fas fa-book-open fa-3x'></i><br><br>" +
@@ -106,8 +307,8 @@ window.TankoubonView = {
                     return;
                 }
 
-                // Load archive details
-                const archivePromises = tank.archives.map(archiveId =>
+                // Load archive details for the current page
+                const archivePromises = response.archives.map(archiveId =>
                     $.ajax({
                         url: "../api/archives/" + archiveId,
                         type: "GET"
@@ -115,25 +316,90 @@ window.TankoubonView = {
                 );
 
                 Promise.all(archivePromises).then(archives => {
+                    console.log('Loaded archive details:', archives.length);
+                    this.archives = archives;
+                    
                     let html = "<div class='archive-grid'>";
-                    archives.forEach((archive, index) => {
+                    archives.forEach((archive) => {
                         html += `
                             <div class='archive-card' onclick='window.location.href="../reader?id=${archive.arcid}&tank=${tankId}"'>
                                 <img src="../api/archives/${archive.arcid}/thumbnail" alt="Thumbnail" />
                                 <div class='title'>${archive.title}</div>
-                                ${TankoubonView.getProgressBadge(archive)}
+                                ${this.getProgressBadge(archive)}
                             </div>
                         `;
                     });
                     html += "</div>";
                     
                     $('#archives-container').html(html);
+                    this.updatePagination();
                 });
             },
-            error: function(xhr, status, error) {
-                LRR.showErrorToast("Error loading archives: " + error);
+            error: (xhr, status, error) => {
+                console.error('API error:', { status, error, response: xhr.responseText });
+                LRR.showErrorToast("Error loading tankoubon: " + error);
+                $('#archives-container').html(
+                    "<div class='error-message'>" +
+                    "<i class='fas fa-exclamation-circle fa-3x'></i><br><br>" +
+                    "Error loading archives: " + error +
+                    "</div>"
+                );
             }
         });
+    },
+
+    /**
+     * Update pagination controls
+     */
+    updatePagination: function() {
+        const totalPages = Math.ceil(this.totalArchives / this.itemsPerPage);
+        console.log('Updating pagination:', {
+            totalArchives: this.totalArchives,
+            itemsPerPage: this.itemsPerPage,
+            totalPages: totalPages,
+            currentPage: this.currentPage
+        });
+
+        // Update both page selects
+        $('#page-select, #page-select-bottom').each((_, select) => {
+            const $select = $(select);
+            $select.empty();
+            
+            for (let i = 1; i <= totalPages; i++) {
+                $select.append($('<option>', {
+                    value: i,
+                    text: `${i} / ${totalPages}`,
+                    selected: i === this.currentPage + 1
+                }));
+            }
+        });
+
+        // Update both items-per-page dropdowns
+        $('#items-per-page, #items-per-page-bottom').val(this.itemsPerPage);
+
+        // Update showing/total counts
+        const start = this.currentPage * this.itemsPerPage + 1;
+        const end = Math.min(start + this.archives.length - 1, this.totalArchives);
+        $('#showing-count, #showing-count-bottom').text(`${start}-${end}`);
+        $('#total-count, #total-count-bottom').text(this.totalArchives);
+
+        // Update last page numbers
+        $('#last-page-number, #last-page-number-bottom').text(totalPages);
+
+        // Update navigation button states
+        const isFirstPage = this.currentPage === 0;
+        const isLastPage = this.currentPage >= totalPages - 1;
+
+        $('#first-page, #first-page-bottom').prop('disabled', isFirstPage);
+        $('#prev-page, #prev-page-bottom').prop('disabled', isFirstPage);
+        $('#next-page, #next-page-bottom').prop('disabled', isLastPage);
+        $('#last-page, #last-page-bottom').prop('disabled', isLastPage);
+
+        // Update URL with current parameters
+        const url = new URL(window.location);
+        url.searchParams.set('page', this.currentPage);
+        url.searchParams.set('size', this.itemsPerPage);
+        window.history.replaceState({}, '', url);
     },
 
     /**

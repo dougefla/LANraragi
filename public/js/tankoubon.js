@@ -14,7 +14,7 @@ window.Tankoubon = {
     initializeAll: function () {
         // Bind events to DOM
         $("#new-tankoubon").click(this.showNewTankoubonDialog);
-        $("#refresh").click(this.refreshList);
+        $("#refresh").click(() => this.loadTankoubonList());  // Use arrow function to preserve this context
         $("#return").click(() => { window.location.href = "."; });
 
         // Sort functionality
@@ -217,7 +217,11 @@ window.Tankoubon = {
             },
             error: (xhr, status, error) => {
                 $("#loading-indicator").hide();
-                LRR.showErrorToast("Error loading tankoubons: " + error);
+                LRR.toast({
+                    heading: "Error",
+                    text: "Error loading tankoubons: " + error,
+                    icon: "error"
+                });
             }
         });
     },
@@ -233,13 +237,6 @@ window.Tankoubon = {
                 window.location.href = `./tankoubon/${tankId}`;
             }
         });
-    },
-
-    /**
-     * Refresh the list
-     */
-    refreshList: function() {
-        Tankoubon.loadTankoubonList();
     },
 
     /**
@@ -259,7 +256,11 @@ window.Tankoubon = {
             preConfirm: () => {
                 const name = $("#tankoubon-name").val();
                 if (!name) {
-                    LRR.showErrorToast("Please enter a name for the tankoubon");
+                    LRR.toast({
+                        heading: "Error",
+                        text: "Please enter a name for the tankoubon",
+                        icon: "error"
+                    });
                     return false;
                 }
                 return name;
@@ -268,15 +269,22 @@ window.Tankoubon = {
             if (result.isConfirmed) {
                 $.ajax({
                     url: "api/tankoubons",
-                    type: "POST",
-                    data: JSON.stringify({ name: result.value }),
-                    contentType: "application/json",
+                    type: "PUT",
+                    data: { name: result.value },
                     success: function() {
-                        LRR.showSuccessToast("Tankoubon created successfully!");
+                        LRR.toast({
+                            heading: "Success!",
+                            text: "Tankoubon created successfully!",
+                            icon: "success"
+                        });
                         Tankoubon.loadTankoubonList();
                     },
                     error: function(xhr, status, error) {
-                        LRR.showErrorToast("Error creating tankoubon: " + error);
+                        LRR.toast({
+                            heading: "Error",
+                            text: "Error creating tankoubon: " + error,
+                            icon: "error"
+                        });
                     }
                 });
             }
@@ -304,7 +312,11 @@ window.Tankoubon = {
                     preConfirm: () => {
                         const name = $("#tankoubon-name").val();
                         if (!name) {
-                            LRR.showErrorToast("Please enter a name for the tankoubon");
+                            LRR.toast({
+                                heading: "Error",
+                                text: "Please enter a name for the tankoubon",
+                                icon: "error"
+                            });
                             return false;
                         }
                         return name;
@@ -314,21 +326,38 @@ window.Tankoubon = {
                         $.ajax({
                             url: "api/tankoubons/" + tankId,
                             type: "PUT",
-                            data: JSON.stringify({ name: result.value }),
+                            data: JSON.stringify({
+                                metadata: {
+                                    name: result.value
+                                }
+                            }),
                             contentType: "application/json",
                             success: function() {
-                                LRR.showSuccessToast("Tankoubon updated successfully!");
+                                LRR.toast({
+                                    heading: "Success!",
+                                    text: "Tankoubon updated successfully!",
+                                    icon: "success"
+                                });
+                                // Refresh the list after successful update
                                 Tankoubon.loadTankoubonList();
                             },
                             error: function(xhr, status, error) {
-                                LRR.showErrorToast("Error updating tankoubon: " + error);
+                                LRR.toast({
+                                    heading: "Error",
+                                    text: "Error updating tankoubon: " + error,
+                                    icon: "error"
+                                });
                             }
                         });
                     }
                 });
             },
             error: function(xhr, status, error) {
-                LRR.showErrorToast("Error loading tankoubon: " + error);
+                LRR.toast({
+                    heading: "Error",
+                    text: "Error loading tankoubon: " + error,
+                    icon: "error"
+                });
             }
         });
     },
@@ -350,11 +379,20 @@ window.Tankoubon = {
                     url: "api/tankoubons/" + tankId,
                     type: "DELETE",
                     success: function() {
-                        LRR.showSuccessToast("Tankoubon deleted successfully!");
+                        LRR.toast({
+                            heading: "Success!",
+                            text: "Tankoubon deleted successfully!",
+                            icon: "success"
+                        });
+                        // Refresh the list after successful deletion
                         Tankoubon.loadTankoubonList();
                     },
                     error: function(xhr, status, error) {
-                        LRR.showErrorToast("Error deleting tankoubon: " + error);
+                        LRR.toast({
+                            heading: "Error",
+                            text: "Error deleting tankoubon: " + error,
+                            icon: "error"
+                        });
                     }
                 });
             }
@@ -378,11 +416,19 @@ window.Tankoubon = {
                     url: "api/tankoubons/" + tankId + "/delete_all",
                     type: "DELETE",
                     success: function() {
-                        LRR.showSuccessToast("Tankoubon and archives deleted successfully!");
+                        LRR.toast({
+                            heading: "Success!",
+                            text: "Tankoubon and archives deleted successfully!",
+                            icon: "success"
+                        });
                         Tankoubon.loadTankoubonList();
                     },
                     error: function(xhr, status, error) {
-                        LRR.showErrorToast("Error deleting tankoubon and archives: " + error);
+                        LRR.toast({
+                            heading: "Error",
+                            text: "Error deleting tankoubon and archives: " + error,
+                            icon: "error"
+                        });
                     }
                 });
             }
@@ -407,7 +453,6 @@ window.Tankoubon = {
                     }
                 },
                 error: function(error) {
-                    console.error("Error getting tankoubon preview:", error);
                     resolve(null);
                 }
             });

@@ -158,10 +158,10 @@ sub restore_from_JSON {
 
                 # Update archives list with proper error handling
                 my @archives = @{ $tank->{"archives"} };
-                my ($result, $error) = LANraragi::Model::Tankoubon::update_archive_list( $tank_id, { archives => \@archives } );
+                my ($archives_result, $archives_error) = LANraragi::Model::Tankoubon::update_archive_list( $tank_id, { archives => \@archives } );
                 
-                if (!$result) {
-                    $logger->warn("Error updating archive list for tankoubon $tank_id: $error");
+                if (!$archives_result) {
+                    $logger->warn("Error updating archive list for tankoubon $tank_id: $archives_error");
                 }
 
                 # Restore metadata (tags, summary, cover)
@@ -178,9 +178,9 @@ sub restore_from_JSON {
                 }
 
                 # Update all metadata
-                my ($result, $error) = LANraragi::Model::Tankoubon::update_metadata( $tank_id, \%metadata );
-                if (!$result) {
-                    $logger->warn("Error updating metadata for tankoubon $tank_id: $error");
+                my ($metadata_result, $metadata_error) = LANraragi::Model::Tankoubon::update_metadata( $tank_id, \%metadata );
+                if (!$metadata_result) {
+                    $logger->warn("Error updating metadata for tankoubon $tank_id: $metadata_error");
                 }
             };
             if ($@) {

@@ -71,12 +71,12 @@ sub build_stat_hashes {
     foreach my $tank (@tanks) {
 
         my $tank_id       = %$tank{id};
-        my $tank_title    = lc( %$tank{name} );
+        my $tank_title    = %$tank{name} // '';  # Default to empty string if name is undefined
         my @tank_archives = @{ %$tank{archives} };
 
         # Add the tank name to LRR_TITLES so it shows up in tagless searches when tank grouping is enabled.
         # (This does nothing if the tank is empty, as it won't be in LRR_TANKGROUPED)
-        $redistx->zadd( "LRR_TITLES", 0, "$tank_title\0$tank_id" );
+        $redistx->zadd( "LRR_TITLES", 0, lc($tank_title) . "\0$tank_id" );
 
         if ( scalar @tank_archives == 0 ) {
             $logger->warn("Tank $tank_id has no archives in it. Skipping.");

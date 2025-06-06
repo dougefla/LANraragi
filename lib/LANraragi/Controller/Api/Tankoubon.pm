@@ -35,12 +35,23 @@ sub get_tankoubon_list {
 sub get_tankoubon {
     my $self = shift;
     my $tankid = $self->stash('id');
-    my %tankoubon = LANraragi::Model::Tankoubon::get_tankoubon($tankid);
+    my $page = $self->param('page') || 0;
+    my $size = $self->param('size');
+
+    # Get the page size from config if not specified
+    unless (defined $size) {
+        $size = LANraragi::Model::Config->get_pagesize;
+    }
+
+    my ($total, $filtered, %tankoubon) = LANraragi::Model::Tankoubon::get_tankoubon($tankid, 1, $page, $size);
 
     unless (%tankoubon) {
         render_api_response($self, "get_tankoubon", "The given tankoubon does not exist.");
         return;
     }
+
+    # Add total count to response
+    $tankoubon{total} = $total;
 
     $self->render(json => \%tankoubon);
 }

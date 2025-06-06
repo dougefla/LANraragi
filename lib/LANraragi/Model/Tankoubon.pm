@@ -19,7 +19,7 @@ use LANraragi::Model::Archive;
 use Exporter 'import';
 our @EXPORT = qw(get_tankoubon_list create_tankoubon get_tankoubon delete_tankoubon update_tankoubon add_to_tankoubon remove_from_tankoubon get_tankoubons_containing_archive delete_tankoubon_and_archives);
 
-my %TANK_METADATA = ( "name" => 0, "summary" => -1, "tags" => -2, "cover_archive" => -3 );
+my %TANK_METADATA = ( "name" => 0, "summary" => -1, "tags" => -2, "cover_archive" => -3, "last_updated" => -4 );
 
 # get_tankoubon_list(page)
 #   Returns a list of all the Tankoubon objects.
@@ -51,9 +51,20 @@ sub get_tankoubon_list {
             my $archive_count = $redis->zcount($id, 1, "+inf");
             $tank{archive_count} = $archive_count;
             
-            # Add last_updated timestamp from the ID (TANK_timestamp)
-            my ($timestamp) = $id =~ /TANK_(\d+)/;
-            $tank{last_updated} = $timestamp || 0;
+            # Get last_updated timestamp from metadata
+            my @last_updated = $redis->zrangebyscore($id, $TANK_METADATA{"last_updated"}, $TANK_METADATA{"last_updated"}, qw{LIMIT 0 1});
+            my $last_updated = 0;
+            if (@last_updated) {
+                my $last_updated_str = redis_decode($last_updated[0]);
+                ($last_updated) = $last_updated_str =~ /last_updated_(\d+)/;
+            }
+            
+            # If no last_updated metadata found, fall back to ID timestamp
+            if (!$last_updated) {
+                ($last_updated) = $id =~ /TANK_(\d+)/;
+            }
+            
+            $tank{last_updated} = $last_updated || 0;
             
             push @tanks, \%tank;
         }
@@ -68,7 +79,16 @@ sub get_tankoubon_list {
             $b_val = lc($b->{name});
             $result = $a_val cmp $b_val;
         }
-        elsif ($sort_by eq 'date_added' || $sort_by eq 'last_updated') {
+        elsif ($sort_by eq 'date_added') {
+            # For date_added, use the ID timestamp
+            my ($a_timestamp) = $a->{id} =~ /TANK_(\d+)/;
+            my ($b_timestamp) = $b->{id} =~ /TANK_(\d+)/;
+            $a_val = $a_timestamp || 0;
+            $b_val = $b_timestamp || 0;
+            $result = $a_val <=> $b_val;
+        }
+        elsif ($sort_by eq 'last_updated') {
+            # For last_updated, use the metadata field
             $a_val = $a->{last_updated} || 0;
             $b_val = $b->{last_updated} || 0;
             $result = $a_val <=> $b_val;
@@ -152,6 +172,7 @@ sub create_tankoubon ( $name, $tank_id ) {
     $redis->zadd( $tank_id, $TANK_METADATA{"name"},    redis_encode("name_$name") );
     $redis->zadd( $tank_id, $TANK_METADATA{"summary"}, redis_encode("summary_") );
     $redis->zadd( $tank_id, $TANK_METADATA{"tags"},    redis_encode("tags_") );
+    $redis->zadd( $tank_id, $TANK_METADATA{"last_updated"}, redis_encode("last_updated_" . time()) );
 
     $redis->quit;
     $redis_search->quit;
@@ -160,13 +181,13 @@ sub create_tankoubon ( $name, $tank_id ) {
     return $tank_id;
 }
 
-# get_tankoubon(tankoubonid, fulldata, page)
+# get_tankoubon(tankoubonid, fulldata, page, size)
 #   Returns the Tankoubon matching the given id.
 #   Returns undef if the id doesn't exist.
-sub get_tankoubon ( $tank_id, $fulldata = 0, $page = 0 ) {
+sub get_tankoubon ( $tank_id, $fulldata = 0, $page = 0, $size = undef ) {
     my $logger      = get_logger( "Tankoubon", "lanraragi" );
     my $redis       = LANraragi::Model::Config->get_redis;
-    my $keysperpage = LANraragi::Model::Config->get_pagesize;
+    my $keysperpage = $size || LANraragi::Model::Config->get_pagesize;
 
     $page //= 0;
 
@@ -326,6 +347,9 @@ sub update_metadata ( $tank_id, $data ) {
             update_metadata_field( $tank_id, "cover_archive", $cover_archive );
         }
 
+        # Update last_updated timestamp
+        update_metadata_field( $tank_id, "last_updated", time() );
+
         $redis->quit;
         return ( 1, $err );
     }
@@ -403,6 +427,10 @@ sub update_archive_list ( $tank_id, $data ) {
             # Update
             $redis->zadd( $tank_id, @update );
         }
+
+        # Update last_updated timestamp
+        update_metadata_field($tank_id, "last_updated", time());
+
         $redis->exec;
         $redis_search->exec;
 
@@ -456,6 +484,10 @@ sub add_to_tankoubon ( $tank_id, $arc_id ) {
         }
 
         $redis->zadd( $tank_id, $score, $arc_id );
+
+        # Update last_updated timestamp
+        update_metadata_field($tank_id, "last_updated", time());
+
         $redis->quit;
 
         # Adding an archive to the tank will always hide it from main search, and show the tank instead
@@ -496,45 +528,25 @@ sub remove_from_tankoubon ( $tank_id, $arcid ) {
         my $score = $redis->zscore( $tank_id, $arcid );
 
         unless ($score) {
-            $err = "$arcid not in tankoubon $tank_id, doing nothing.";
+            $err = "$arcid not present in category $tank_id, doing nothing.";
             $logger->warn($err);
             $redis->quit;
             return ( 1, $err );
         }
 
-        # Get all the elements after the one to remove to update the score
-        my %toupdate = $redis->zrangebyscore( $tank_id, $score + 1, "+inf", "WITHSCORES" );
-
-        my @update;
-
-        # Build new scores
-        foreach my $i ( keys %toupdate ) {
-            push @update, $toupdate{$i} - 1;
-            push @update, $i;
-        }
-
-        # Remove element
         $redis->zrem( $tank_id, $arcid );
 
-        # Update scores
-        if ( scalar @update ) {
-            $redis->zadd( $tank_id, @update );
-        }
-
-        if ( $redis->zcard($tank_id) == 1 ) {
-
-            # No elements in tank, remove it from search
-            $redis->srem( "LRR_TANKGROUPED", $tank_id );
-        }
+        # Update last_updated timestamp
+        update_metadata_field($tank_id, "last_updated", time());
 
         $redis->quit;
 
-        # Removing an archive from a tank might have it show up in main search again
+        # Make archive visible in search again unless other tanks contain it
+        $redis = LANraragi::Model::Config->get_redis_search;
         unless ( get_tankoubons_containing_archive($arcid) ) {
-            $redis = LANraragi::Model::Config->get_redis_search;
             $redis->sadd( "LRR_TANKGROUPED", $arcid );
-            $redis->quit;
         }
+        $redis->quit;
 
         invalidate_cache();
         return ( 1, $err );
