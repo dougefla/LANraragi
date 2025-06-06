@@ -67,6 +67,11 @@ sub view {
         my ($timestamp) = $last_updated_str =~ /last_updated_(\d+)/;
         $tank{last_updated} = $timestamp if $timestamp;
     }
+
+    # Get total archive count
+    my $archive_count = $redis->zcount($tank_id, 1, "+inf");
+    $tank{total} = $archive_count;
+
     $redis->quit;
 
     $self->render(

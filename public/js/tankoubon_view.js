@@ -454,7 +454,7 @@ window.TankoubonView = {
                             data: JSON.stringify(result.value),
                             contentType: "application/json",
                             success: function() {
-                                LRR.showSuccessToast("Tankoubon updated successfully!");
+                                LRR.toast("Tankoubon updated successfully!");
                                 window.location.reload();
                             },
                             error: function(xhr, status, error) {
@@ -491,11 +491,19 @@ window.TankoubonView = {
                     url: "../api/tankoubons/" + tankId + (deleteArchives ? "?delete_archives=1" : ""),
                     type: "DELETE",
                     success: function() {
-                        LRR.showSuccessToast("Tankoubon deleted successfully!");
+                        LRR.toast({
+                            heading: "Success!",
+                            text: "Tankoubon deleted successfully!",
+                            icon: "success"
+                        });
                         window.location.href = "../tankoubons";
                     },
                     error: function(xhr, status, error) {
-                        LRR.showErrorToast("Error deleting tankoubon: " + error);
+                        LRR.toast({
+                            heading: "Error",
+                            text: "Error deleting tankoubon: " + error,
+                            icon: "error"
+                        });
                     }
                 });
             }
@@ -510,6 +518,7 @@ window.TankoubonView = {
         $.ajax({
             url: "../api/tankoubons/" + tankId,
             type: "GET",
+            data: { size: -1 }, // Request all archives
             success: function (tank) {
                 if (!tank.archives || tank.archives.length === 0) {
                     LRR.showInfoToast("No archives to manage.");
@@ -525,36 +534,220 @@ window.TankoubonView = {
                 );
 
                 Promise.all(archivePromises).then(archives => {
-                    let html = "<div class='archive-list'>";
-                    html += "<table style='width: 100%; margin-top: 20px;'>";
-                    html += "<thead><tr><th style='width: 60px'></th><th>Title</th><th style='width: 120px'>Actions</th></tr></thead><tbody>";
+                    let html = `
+                        <div class='manage-archives'>
+                            <div class='search-bar'>
+                                <input type='text' id='archive-search' class='favtag-btn' placeholder='Search archives...' style='width: 100%; margin-bottom: 15px;'>
+                            </div>
+                            <div class='archive-grid-container' id='sortable-archives'>
+                    `;
 
                     archives.forEach((archive, index) => {
-                        html += "<tr>" +
-                            "<td><img src='../api/archives/" + archive.arcid + "/thumbnail' style='max-width: 50px; height: auto;' /></td>" +
-                            "<td>" + archive.title + "</td>" +
-                            "<td style='text-align: right'>" +
-                            "<div class='btn-group'>" +
-                            "<button class='stdbtn' onclick='TankoubonView.moveArchive(\"" + tankId + "\", \"" + archive.arcid + "\", " + index + ", -1)'>" +
-                            "<i class='fas fa-arrow-up'></i></button>" +
-                            "<button class='stdbtn' onclick='TankoubonView.moveArchive(\"" + tankId + "\", \"" + archive.arcid + "\", " + index + ", 1)'>" +
-                            "<i class='fas fa-arrow-down'></i></button>" +
-                            "<button class='stdbtn' onclick='TankoubonView.setAsCover(\"" + tankId + "\", \"" + archive.arcid + "\")'>" +
-                            "<i class='fas fa-image'></i></button>" +
-                            "<button class='stdbtn' onclick='TankoubonView.removeArchive(\"" + tankId + "\", \"" + archive.arcid + "\")'>" +
-                            "<i class='fas fa-times'></i></button>" +
-                            "</div>" +
-                            "</td></tr>";
+                        html += `
+                            <div class='archive-manage-card' data-archive-id='${archive.arcid}' data-index='${index}'>
+                                <div class='archive-manage-preview'>
+                                    <img src='../api/archives/${archive.arcid}/thumbnail' alt='Thumbnail' />
+                                    ${archive.arcid === tank.cover_archive ? '<div class="cover-badge"><i class="fas fa-star"></i> Cover</div>' : ''}
+                                </div>
+                                <div class='archive-manage-info'>
+                                    <div class='archive-manage-title' title='${archive.title}'>${archive.title}</div>
+                                    <div class='archive-manage-actions'>
+                                        <button class='action-btn move-up' title='Move Up' ${index === 0 ? 'disabled' : ''}>
+                                            <i class='fas fa-arrow-up'></i>
+                                        </button>
+                                        <button class='action-btn move-down' title='Move Down' ${index === archives.length - 1 ? 'disabled' : ''}>
+                                            <i class='fas fa-arrow-down'></i>
+                                        </button>
+                                        <button class='action-btn set-cover' title='Set as Cover'>
+                                            <i class='fas fa-image'></i>
+                                        </button>
+                                        <button class='action-btn remove' title='Remove from Tankoubon'>
+                                            <i class='fas fa-times'></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
                     });
 
-                    html += "</tbody></table>";
-                    html += "</div>";
+                    html += `
+                            </div>
+                        </div>
+                    `;
+
+                    // Add styles for the manage archives interface
+                    const styles = `
+                        <style>
+                            .manage-archives {
+                                padding: 15px;
+                            }
+                            .archive-grid-container {
+                                display: grid;
+                                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+                                gap: 15px;
+                                margin-top: 15px;
+                            }
+                            .archive-manage-card {
+                                background: #43464E;
+                                border-radius: 8px;
+                                overflow: hidden;
+                                transition: all 0.3s ease;
+                                cursor: move;
+                            }
+                            .archive-manage-card:hover {
+                                transform: translateY(-2px);
+                                box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+                            }
+                            .archive-manage-preview {
+                                position: relative;
+                                height: 200px;
+                                overflow: hidden;
+                            }
+                            .archive-manage-preview img {
+                                width: 100%;
+                                height: 100%;
+                                object-fit: contain;
+                                background: #363940;
+                            }
+                            .cover-badge {
+                                position: absolute;
+                                top: 8px;
+                                right: 8px;
+                                background: rgba(70, 130, 180, 0.9);
+                                color: white;
+                                padding: 4px 8px;
+                                border-radius: 4px;
+                                font-size: 0.8em;
+                            }
+                            .archive-manage-info {
+                                padding: 10px;
+                            }
+                            .archive-manage-title {
+                                font-size: 0.9em;
+                                margin-bottom: 10px;
+                                white-space: nowrap;
+                                overflow: hidden;
+                                text-overflow: ellipsis;
+                            }
+                            .archive-manage-actions {
+                                display: flex;
+                                gap: 5px;
+                                justify-content: flex-end;
+                            }
+                            .action-btn {
+                                background: #4a4e57;
+                                border: none;
+                                border-radius: 4px;
+                                padding: 6px;
+                                color: white;
+                                cursor: pointer;
+                                transition: background 0.2s ease;
+                            }
+                            .action-btn:hover:not(:disabled) {
+                                background: #5a5f6a;
+                            }
+                            .action-btn:disabled {
+                                opacity: 0.5;
+                                cursor: not-allowed;
+                            }
+                            .action-btn.remove:hover {
+                                background: #dc3545;
+                            }
+                            .ui-sortable-helper {
+                                box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+                            }
+                            .ui-sortable-placeholder {
+                                visibility: visible !important;
+                                background: #363940;
+                                border: 2px dashed #4a4e57;
+                                border-radius: 8px;
+                            }
+                        </style>
+                    `;
 
                     LRR.showPopUp({
                         title: "Manage Archives",
-                        html: html,
-                        width: "800px",
-                        showConfirmButton: false
+                        html: styles + html,
+                        width: "90%",
+                        showConfirmButton: false,
+                        didOpen: () => {
+                            // Initialize search functionality
+                            $('#archive-search').on('input', function() {
+                                const searchTerm = $(this).val().toLowerCase();
+                                $('.archive-manage-card').each(function() {
+                                    const title = $(this).find('.archive-manage-title').text().toLowerCase();
+                                    $(this).toggle(title.includes(searchTerm));
+                                });
+                            });
+
+                            // Initialize sortable
+                            $('#sortable-archives').sortable({
+                                placeholder: 'archive-manage-card ui-sortable-placeholder',
+                                update: function(event, ui) {
+                                    const newOrder = $(this).sortable('toArray', { attribute: 'data-archive-id' });
+                                    // Update the order in the backend
+                                    $.ajax({
+                                        url: "../api/tankoubons/" + tankId + "/archives/reorder",
+                                        type: "POST",
+                                        contentType: "application/json",
+                                        data: JSON.stringify({ archives: newOrder }),
+                                        success: function() {
+                                            LRR.toast("Archive order updated!");
+                                        },
+                                        error: function(xhr, status, error) {
+                                            LRR.showErrorToast("Error updating order: " + error);
+                                            // Revert the sort
+                                            $('#sortable-archives').sortable('cancel');
+                                        }
+                                    });
+                                }
+                            });
+
+                            // Initialize button actions
+                            $('.move-up').click(function() {
+                                const card = $(this).closest('.archive-manage-card');
+                                const prev = card.prev();
+                                if (prev.length) {
+                                    prev.before(card);
+                                    $('#sortable-archives').sortable('refresh');
+                                    $('#sortable-archives').trigger('sortupdate');
+                                }
+                            });
+
+                            $('.move-down').click(function() {
+                                const card = $(this).closest('.archive-manage-card');
+                                const next = card.next();
+                                if (next.length) {
+                                    next.after(card);
+                                    $('#sortable-archives').sortable('refresh');
+                                    $('#sortable-archives').trigger('sortupdate');
+                                }
+                            });
+
+                            $('.set-cover').click(function() {
+                                const archiveId = $(this).closest('.archive-manage-card').data('archive-id');
+                                TankoubonView.setAsCover(tankId, archiveId);
+                            });
+
+                            $('.remove').click(function() {
+                                const card = $(this).closest('.archive-manage-card');
+                                const archiveId = card.data('archive-id');
+                                const title = card.find('.archive-manage-title').text();
+                                
+                                LRR.showPopUp({
+                                    title: "Remove Archive",
+                                    text: `Are you sure you want to remove "${title}" from the tankoubon?`,
+                                    icon: "warning",
+                                    showCancelButton: true,
+                                    confirmButtonText: "Remove",
+                                    confirmButtonColor: "#dc3545"
+                                }).then((result) => {
+                                    if (result.isConfirmed) {
+                                        TankoubonView.removeArchive(tankId, archiveId);
+                                    }
+                                });
+                            });
+                        }
                     });
                 });
             },
@@ -621,10 +814,22 @@ window.TankoubonView = {
                     url: "../api/tankoubons/" + tankId + "/archives/" + archiveId,
                     type: "DELETE",
                     success: function() {
-                        window.location.reload();
+                        LRR.toast({
+                            heading: "Success!",
+                            text: "Archive removed successfully!",
+                            icon: "success"
+                        });
+                        // Close the manage archives dialog
+                        Swal.close();
+                        // Reload the page to refresh the archive list
+                        TankoubonView.loadArchives();
                     },
                     error: function(xhr, status, error) {
-                        LRR.showErrorToast("Error removing archive: " + error);
+                        LRR.toast({
+                            heading: "Error",
+                            text: "Error removing archive: " + error,
+                            icon: "error"
+                        });
                     }
                 });
             }

@@ -611,7 +611,7 @@
             <div class='tankoubon-info'>
                 <h2 class='tankoubon-title'>[% tank.name %]</h2>
                 <div class='tankoubon-stats'>
-                    <div>[% tank.archives.size %] Archives</div>
+                    <div>[% tank.total %] Archives</div>
                     [% IF tank.last_updated %]
                     <div style="margin-top: 10px;">
                         <span style="color: #999;">Last Updated:</span>

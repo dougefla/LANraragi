@@ -1834,3 +1834,31 @@ msgstr "页码："
 
 msgid "No tankoubons found."
 msgstr "未找到单行本。"
+
+# Pagination translations
+msgid "Last Page"
+msgstr "最后一页"
+
+msgid "First Page"
+msgstr "第一页"
+
+msgid "Previous Page"
+msgstr "上一页"
+
+msgid "Next Page"
+msgstr "下一页"
+
+msgid "Showing"
+msgstr "显示"
+
+msgid "of"
+msgstr "共"
+
+msgid "Previous Episode"
+msgstr "上一话"
+
+msgid "Next Episode"
+msgstr "下一话"
+
+msgid "Done reading? Go back to Tankoubon View"
+msgstr "阅读完成？返回单行本视图"

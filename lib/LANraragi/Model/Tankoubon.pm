@@ -187,7 +187,7 @@ sub create_tankoubon ( $name, $tank_id ) {
 sub get_tankoubon ( $tank_id, $fulldata = 0, $page = 0, $size = undef ) {
     my $logger      = get_logger( "Tankoubon", "lanraragi" );
     my $redis       = LANraragi::Model::Config->get_redis;
-    my $keysperpage = $size || LANraragi::Model::Config->get_pagesize;
+    my $keysperpage = defined $size && $size > 0 ? $size : LANraragi::Model::Config->get_pagesize;
 
     $page //= 0;
 
@@ -215,8 +215,8 @@ sub get_tankoubon ( $tank_id, $fulldata = 0, $page = 0, $size = undef ) {
 
     my %tankoubon;
 
-    # Grab page
-    if ( $page < 0 ) {
+    # Grab page - if size is -1 or negative, get all archives
+    if ( defined $size && $size < 0 ) {
         %tankoubon = $redis->zrangebyscore( $tank_id, 1, "+inf", "WITHSCORES" );
     } else {
         %tankoubon = $redis->zrangebyscore( $tank_id, 1, "+inf", "WITHSCORES", @limit );
