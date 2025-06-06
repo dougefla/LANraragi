@@ -2,6 +2,13 @@
  * Tankoubon Operations
  */
 window.Tankoubon = {
+    currentPage: 0,
+    totalPages: 0,
+    pageSize: 100,  // Default page size
+    searchQuery: '',
+    sortBy: 'name',
+    sortOrder: 'asc',
+
     /**
      * Initialize the page
      */
@@ -11,18 +18,73 @@ window.Tankoubon = {
         $("#refresh").click(this.refreshList);
         $("#return").click(() => { window.location.href = "."; });
 
+        // Search functionality
+        $("#search-input").on('input', this.debounce(() => {
+            this.searchQuery = $("#search-input").val();
+            this.currentPage = 0;
+            this.loadTankoubonList();
+        }, 300));
+
+        $("#search-btn").click(() => {
+            this.searchQuery = $("#search-input").val();
+            this.currentPage = 0;
+            this.loadTankoubonList();
+        });
+
+        $("#clear-search").click(() => {
+            $("#search-input").val('');
+            this.searchQuery = '';
+            this.currentPage = 0;
+            this.loadTankoubonList();
+        });
+
+        // Sort functionality
+        $("#sort-by").change(() => {
+            this.sortBy = $("#sort-by").val();
+            this.currentPage = 0;
+            this.loadTankoubonList();
+        });
+
+        $("#sort-order").click((e) => {
+            e.preventDefault();
+            this.sortOrder = this.sortOrder === 'asc' ? 'desc' : 'asc';
+            $(e.target).toggleClass('fa-sort-alpha-down fa-sort-alpha-up');
+            this.loadTankoubonList();
+        });
+
         // View toggle buttons
-        $("#list-view").click(() => {
+        $("#list-view").click((e) => {
+            e.preventDefault();
+            $(".mode-toggle").removeClass('active');
             $("#list-view").addClass('active');
-            $("#grid-view").removeClass('active');
             localStorage.setItem('tankoubon-view', 'list');
             this.loadTankoubonList();
         });
 
-        $("#grid-view").click(() => {
+        $("#grid-view").click((e) => {
+            e.preventDefault();
+            $(".mode-toggle").removeClass('active');
             $("#grid-view").addClass('active');
-            $("#list-view").removeClass('active');
             localStorage.setItem('tankoubon-view', 'grid');
+            this.loadTankoubonList();
+        });
+
+        // Page size control
+        const savedPageSize = localStorage.getItem('tankoubon-page-size') || '100';
+        this.pageSize = parseInt(savedPageSize);
+        $("#page-size").val(savedPageSize);
+
+        $("#page-size").change(() => {
+            this.pageSize = parseInt($("#page-size").val());
+            localStorage.setItem('tankoubon-page-size', this.pageSize);
+            this.currentPage = 0;  // Reset to first page when changing page size
+            this.loadTankoubonList();
+            this.updatePageSelect();
+        });
+
+        // Page select dropdown
+        $("#page-select").change(() => {
+            this.currentPage = parseInt($("#page-select").val()) - 1;
             this.loadTankoubonList();
         });
 
@@ -30,6 +92,8 @@ window.Tankoubon = {
         const viewMode = localStorage.getItem('tankoubon-view') || 'list';
         if (viewMode === 'grid') {
             $("#grid-view").click();
+        } else {
+            $("#list-view").addClass('active');
         }
 
         // Initialize context menu
@@ -65,6 +129,37 @@ window.Tankoubon = {
     },
 
     /**
+     * Debounce function for search input
+     */
+    debounce: function(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    },
+
+    /**
+     * Update the page select dropdown with the current number of pages
+     */
+    updatePageSelect: function() {
+        const $pageSelect = $("#page-select");
+        $pageSelect.empty();
+        
+        for (let i = 1; i <= this.totalPages; i++) {
+            $pageSelect.append($('<option>', {
+                value: i,
+                text: i,
+                selected: i === this.currentPage + 1
+            }));
+        }
+    },
+
+    /**
      * Get a preview image for a tankoubon from its first archive
      */
     getTankoubonPreview: function (tankId) {
@@ -94,15 +189,37 @@ window.Tankoubon = {
      */
     loadTankoubonList: function () {
         const viewMode = localStorage.getItem('tankoubon-view') || 'list';
+        const params = {
+            page: this.currentPage,
+            size: this.pageSize,
+            sort: this.sortBy,
+            order: this.sortOrder
+        };
+
+        if (this.searchQuery) {
+            params.search = this.searchQuery;
+        }
+
+        // Show loading indicator
+        $("#loading-indicator").show();
+        $("#empty-state").hide();
+        $("#tankoubon-list table, #tankoubon-list .grid-view").remove();
 
         $.ajax({
             url: "api/tankoubons",
             type: "GET",
-            success: function (data) {
-                let html = "";
+            data: params,
+            success: (response) => {
+                const data = response.result;
+
                 if (data.length === 0) {
-                    html = "<div class='no-results'><i class='fas fa-book fa-3x'></i><br><br>No tankoubons found.<br>Create one using the 'New Tankoubon' button above!</div>";
-                } else if (viewMode === 'list') {
+                    $("#loading-indicator").hide();
+                    $("#empty-state").show();
+                    return;
+                }
+
+                let html = "";
+                if (viewMode === 'list') {
                     html = "<div class='ido'><table class='table-list'><thead><tr>" +
                         "<th style='width: 40%'>Name</th>" +
                         "<th style='width: 30%'>Archives</th>" +
@@ -113,7 +230,7 @@ window.Tankoubon = {
                         const archiveCount = tank.archive_count || 0;
                         const lastModified = tank.last_modified ? new Date(tank.last_modified * 1000).toLocaleString() : "Never";
                         
-                        html += "<tr class='tankoubon-item' data-tank-id='" + tank.id + "' style='cursor: pointer; position: relative;' onclick='window.location.href=\"./tankoubon/" + tank.id + "\"'>" +
+                        html += "<tr class='tankoubon-item' data-tank-id='" + tank.id + "' style='cursor: pointer;'>" +
                             "<td class='tank-name'>" + tank.name + "</td>" +
                             "<td><div class='archive-count'><i class='fas fa-book'></i> " + archiveCount + "</div></td>" +
                             "<td>" + lastModified + "</td>" +
@@ -121,12 +238,11 @@ window.Tankoubon = {
                     });
 
                     html += "</tbody></table></div>";
-                    $("#tankoubon-list").html(html);
                 } else {
                     // For grid view, we need to load previews first
                     html = "<div class='grid-view'>";
                     const previewPromises = data.map(tank => 
-                        Tankoubon.getTankoubonPreview(tank.id).then(previewUrl => ({
+                        this.getTankoubonPreview(tank.id).then(previewUrl => ({
                             ...tank,
                             previewUrl
                         }))
@@ -137,7 +253,7 @@ window.Tankoubon = {
                             const archiveCount = tank.archive_count || 0;
                             const lastModified = tank.last_modified ? new Date(tank.last_modified * 1000).toLocaleString() : "Never";
                             
-                            html += "<div class='tankoubon-item tankoubon-card' data-tank-id='" + tank.id + "' onclick='window.location.href=\"./tankoubon/" + tank.id + "\"'>" +
+                            html += "<div class='tankoubon-item tankoubon-card' data-tank-id='" + tank.id + "'>" +
                                 "<div class='preview'>";
                             
                             if (tank.previewUrl) {
@@ -159,119 +275,138 @@ window.Tankoubon = {
 
                         html += "</div>";
                         $("#tankoubon-list").html(html);
+
+                        // Add click handlers for grid view
+                        this.addClickHandlers();
                     });
                 }
+
+                if (viewMode === 'list') {
+                    $("#tankoubon-list").html(html);
+                    // Add click handlers for list view
+                    this.addClickHandlers();
+                }
+
+                $("#loading-indicator").hide();
+                
+                // Update pagination
+                this.totalPages = Math.ceil(response.total / this.pageSize);
+                this.updatePageSelect();
             },
-            error: function (xhr, status, error) {
+            error: (xhr, status, error) => {
+                $("#loading-indicator").hide();
                 LRR.showErrorToast("Error loading tankoubons: " + error);
             }
         });
     },
 
     /**
-     * Show dialog for creating a new tankoubon
+     * Add click handlers to tankoubon items
      */
-    showNewTankoubonDialog: function () {
+    addClickHandlers: function() {
+        $('.tankoubon-item').off('click').on('click', function(e) {
+            // Don't trigger if clicking on context menu
+            if (!$(e.target).closest('.context-menu-item').length) {
+                const tankId = $(this).data('tank-id');
+                window.location.href = `./tankoubon/${tankId}`;
+            }
+        });
+    },
+
+    /**
+     * Refresh the list
+     */
+    refreshList: function() {
+        Tankoubon.loadTankoubonList();
+    },
+
+    /**
+     * Show dialog to create a new tankoubon
+     */
+    showNewTankoubonDialog: function() {
         LRR.showPopUp({
-            title: I18N.NewTankoubon,
-            input: "text",
-            inputValue: I18N.TankoubonDefaultName,
+            title: "New Tankoubon",
+            html: `
+                <div style="text-align:left">
+                    <label for="tankoubon-name">Name:</label><br>
+                    <input type="text" id="tankoubon-name" class="stdinput" style="width:100%" maxlength="255">
+                </div>
+            `,
             showCancelButton: true,
-            inputValidator: (value) => {
-                if (!value) {
-                    return I18N.MissingTankoubonName;
+            confirmButtonText: "Create",
+            preConfirm: () => {
+                const name = $("#tankoubon-name").val();
+                if (!name) {
+                    LRR.showErrorToast("Please enter a name for the tankoubon");
+                    return false;
                 }
+                return name;
             }
         }).then((result) => {
             if (result.isConfirmed) {
-                Tankoubon.createTankoubon(result.value);
+                $.ajax({
+                    url: "api/tankoubons",
+                    type: "POST",
+                    data: JSON.stringify({ name: result.value }),
+                    contentType: "application/json",
+                    success: function() {
+                        LRR.showSuccessToast("Tankoubon created successfully!");
+                        Tankoubon.loadTankoubonList();
+                    },
+                    error: function(xhr, status, error) {
+                        LRR.showErrorToast("Error creating tankoubon: " + error);
+                    }
+                });
             }
         });
     },
 
     /**
-     * Show dialog for editing a tankoubon
+     * Show dialog to edit a tankoubon
      */
-    showEditTankoubonDialog: function (tankId) {
+    showEditTankoubonDialog: function(tankId) {
         $.ajax({
             url: "api/tankoubons/" + tankId,
             type: "GET",
-            success: function (tank) {
+            success: function(tank) {
                 LRR.showPopUp({
                     title: "Edit Tankoubon",
-                    input: "text",
-                    inputValue: tank.name,
+                    html: `
+                        <div style="text-align:left">
+                            <label for="tankoubon-name">Name:</label><br>
+                            <input type="text" id="tankoubon-name" class="stdinput" style="width:100%" maxlength="255" value="${tank.name}">
+                        </div>
+                    `,
                     showCancelButton: true,
-                    inputValidator: (value) => {
-                        if (!value) {
-                            return I18N.MissingTankoubonName;
+                    confirmButtonText: "Save",
+                    preConfirm: () => {
+                        const name = $("#tankoubon-name").val();
+                        if (!name) {
+                            LRR.showErrorToast("Please enter a name for the tankoubon");
+                            return false;
                         }
+                        return name;
                     }
                 }).then((result) => {
                     if (result.isConfirmed) {
-                        Tankoubon.updateTankoubon(tankId, result.value);
+                        $.ajax({
+                            url: "api/tankoubons/" + tankId,
+                            type: "PUT",
+                            data: JSON.stringify({ name: result.value }),
+                            contentType: "application/json",
+                            success: function() {
+                                LRR.showSuccessToast("Tankoubon updated successfully!");
+                                Tankoubon.loadTankoubonList();
+                            },
+                            error: function(xhr, status, error) {
+                                LRR.showErrorToast("Error updating tankoubon: " + error);
+                            }
+                        });
                     }
                 });
             },
-            error: function (xhr, status, error) {
+            error: function(xhr, status, error) {
                 LRR.showErrorToast("Error loading tankoubon: " + error);
-            }
-        });
-    },
-
-    /**
-     * Create a new tankoubon
-     */
-    createTankoubon: function (name) {
-        $.ajax({
-            url: "api/tankoubons",
-            type: "PUT",
-            data: { name: name },
-            success: function (data) {
-                if (data.success) {
-                    LRR.toast({
-                        heading: "Success!",
-                        text: "Created tankoubon '" + name + "'",
-                        icon: "success"
-                    });
-                    Tankoubon.loadTankoubonList();
-                } else {
-                    LRR.showErrorToast("Error creating tankoubon: " + data.error);
-                }
-            },
-            error: function (xhr, status, error) {
-                LRR.showErrorToast("Error creating tankoubon: " + error);
-            }
-        });
-    },
-
-    /**
-     * Update a tankoubon
-     */
-    updateTankoubon: function (tankId, name) {
-        $.ajax({
-            url: "api/tankoubons/" + tankId,
-            type: "PUT",
-            contentType: "application/json",
-            data: JSON.stringify({
-                metadata: {
-                    name: name
-                }
-            }),
-            success: function (data) {
-                if (data.success) {
-                    LRR.toast({
-                        heading: "Success!",
-                        text: "Updated tankoubon '" + name + "'",
-                        icon: "success"
-                    });
-                    Tankoubon.loadTankoubonList();
-                } else {
-                    LRR.showErrorToast("Error updating tankoubon: " + data.error);
-                }
-            },
-            error: function (xhr, status, error) {
-                LRR.showErrorToast("Error updating tankoubon: " + error);
             }
         });
     },
@@ -279,38 +414,24 @@ window.Tankoubon = {
     /**
      * Delete a tankoubon
      */
-    deleteTankoubon: function (tankId) {
+    deleteTankoubon: function(tankId) {
         LRR.showPopUp({
             title: "Delete Tankoubon",
-            text: I18N.TankoubonDeleteConfirm,
+            text: "Are you sure you want to delete this tankoubon? This action cannot be undone.",
             icon: "warning",
             showCancelButton: true,
-            confirmButtonColor: "#d33",
-            confirmButtonText: "Delete"
+            confirmButtonText: "Delete",
+            confirmButtonColor: "#dc3545"
         }).then((result) => {
             if (result.isConfirmed) {
                 $.ajax({
                     url: "api/tankoubons/" + tankId,
                     type: "DELETE",
-                    success: function (data) {
-                        if (data.success) {
-                            LRR.toast({
-                                heading: "Success!",
-                                text: I18N.TankoubonDeleted,
-                                icon: "success"
-                            });
-                            // If we're in the main archive view, refresh the datatable
-                            if (IndexTable.dataTable.ajax) {
-                                IndexTable.dataTable.ajax.reload();
-                            } else {
-                                // Otherwise, we're in the tankoubon list view
-                                Tankoubon.loadTankoubonList();
-                            }
-                        } else {
-                            LRR.showErrorToast("Error deleting tankoubon: " + data.error);
-                        }
+                    success: function() {
+                        LRR.showSuccessToast("Tankoubon deleted successfully!");
+                        Tankoubon.loadTankoubonList();
                     },
-                    error: function (xhr, status, error) {
+                    error: function(xhr, status, error) {
                         LRR.showErrorToast("Error deleting tankoubon: " + error);
                     }
                 });
@@ -321,38 +442,24 @@ window.Tankoubon = {
     /**
      * Delete a tankoubon and all its archives
      */
-    deleteTankoubonAndArchives: function (tankId) {
+    deleteTankoubonAndArchives: function(tankId) {
         LRR.showPopUp({
             title: "Delete Tankoubon and Archives",
-            text: "Are you sure you want to delete this tankoubon AND all archives inside it? This action cannot be undone!",
+            text: "Are you sure you want to delete this tankoubon AND all its archives? This action cannot be undone.",
             icon: "warning",
             showCancelButton: true,
-            confirmButtonColor: "#d33",
-            confirmButtonText: "Delete All"
+            confirmButtonText: "Delete All",
+            confirmButtonColor: "#dc3545"
         }).then((result) => {
             if (result.isConfirmed) {
                 $.ajax({
-                    url: "api/tankoubons/" + tankId + "?delete_archives=1",
+                    url: "api/tankoubons/" + tankId + "/delete_all",
                     type: "DELETE",
-                    success: function (data) {
-                        if (data.success) {
-                            LRR.toast({
-                                heading: "Success!",
-                                text: "Tankoubon and all its archives have been deleted!",
-                                icon: "success"
-                            });
-                            // If we're in the main archive view, refresh the datatable
-                            if (IndexTable.dataTable.ajax) {
-                                IndexTable.dataTable.ajax.reload();
-                            } else {
-                                // Otherwise, we're in the tankoubon list view
-                                Tankoubon.loadTankoubonList();
-                            }
-                        } else {
-                            LRR.showErrorToast("Error deleting tankoubon and archives: " + data.error);
-                        }
+                    success: function() {
+                        LRR.showSuccessToast("Tankoubon and archives deleted successfully!");
+                        Tankoubon.loadTankoubonList();
                     },
-                    error: function (xhr, status, error) {
+                    error: function(xhr, status, error) {
                         LRR.showErrorToast("Error deleting tankoubon and archives: " + error);
                     }
                 });
@@ -362,429 +469,31 @@ window.Tankoubon = {
 
     /**
      * Add an archive to a tankoubon
+     * @param {string} tankId The ID of the tankoubon
+     * @param {string} archiveId The ID of the archive to add
      */
-    addArchive: function (tankId, archiveId) {
-        // First get the tankoubon's current archives
+    addArchive: function(tankId, archiveId) {
+        // Ensure we're using the correct API endpoint
+        const baseUrl = window.location.pathname.includes('/tankoubon/') ? '../' : '';
         $.ajax({
-            url: "api/tankoubons/" + tankId,
-            type: "GET",
-            success: function(tank) {
-                // If this is the first archive being added to the tankoubon
-                if (!tank.archives || tank.archives.length === 0) {
-                    // Get the archive's tags and update the tankoubon
-                    $.ajax({
-                        url: "api/archives/" + archiveId,
-                        type: "GET",
-                        success: function(archive) {
-                            // Update tankoubon with the archive's tags
-                            $.ajax({
-                                url: "api/tankoubons/" + tankId,
-                                type: "PUT",
-                                contentType: "application/json",
-                                data: JSON.stringify({
-                                    metadata: {
-                                        tags: archive.tags || ""
-                                    }
-                                }),
-                                success: function() {
-                                    // Then add the archive
-                                    $.ajax({
-                                        url: "api/tankoubons/" + tankId + "/archives/" + archiveId,
-                                        type: "PUT",
-                                        success: function(data) {
-                                            if (data.success) {
-                                                LRR.toast({
-                                                    heading: "Success!",
-                                                    text: data.message,
-                                                    icon: "success"
-                                                });
-                                                // Redraw the datatable to reflect changes
-                                                if (IndexTable.dataTable.ajax) {
-                                                    IndexTable.dataTable.ajax.reload();
-                                                }
-                                            } else {
-                                                LRR.showErrorToast("Error adding archive: " + data.error);
-                                            }
-                                        },
-                                        error: function(xhr, status, error) {
-                                            LRR.showErrorToast("Error adding archive: " + error);
-                                        }
-                                    });
-                                },
-                                error: function(xhr, status, error) {
-                                    LRR.showErrorToast("Error updating tankoubon tags: " + error);
-                                }
-                            });
-                        },
-                        error: function(xhr, status, error) {
-                            LRR.showErrorToast("Error getting archive: " + error);
-                        }
-                    });
+            url: `${baseUrl}api/tankoubons/${tankId}/archives/${archiveId}`,
+            type: "PUT",
+            success: function(response) {
+                if (response.success) {
+                    LRR.showSuccessToast(response.successMessage || "Archive added to tankoubon successfully!");
+                    // Refresh the page if we're on a tankoubon page
+                    if (window.location.pathname.includes('/tankoubon/')) {
+                        window.location.reload();
+                    } else if (IndexTable.dataTable && IndexTable.dataTable.ajax) {
+                        // Otherwise just refresh the datatable
+                        IndexTable.dataTable.ajax.reload();
+                    }
                 } else {
-                    // If not the first archive, just add it normally
-                    $.ajax({
-                        url: "api/tankoubons/" + tankId + "/archives/" + archiveId,
-                        type: "PUT",
-                        success: function(data) {
-                            if (data.success) {
-                                LRR.toast({
-                                    heading: "Success!",
-                                    text: data.message,
-                                    icon: "success"
-                                });
-                                // Redraw the datatable to reflect changes
-                                if (IndexTable.dataTable.ajax) {
-                                    IndexTable.dataTable.ajax.reload();
-                                }
-                            } else {
-                                LRR.showErrorToast("Error adding archive: " + data.error);
-                            }
-                        },
-                        error: function(xhr, status, error) {
-                            LRR.showErrorToast("Error adding archive: " + error);
-                        }
-                    });
+                    LRR.showErrorToast(response.error || "Error adding archive to tankoubon");
                 }
             },
             error: function(xhr, status, error) {
-                LRR.showErrorToast("Error getting tankoubon: " + error);
-            }
-        });
-    },
-
-    /**
-     * Remove an archive from a tankoubon
-     */
-    removeArchive: function (tankId, archiveId) {
-        LRR.showPopUp({
-            title: "Remove Archive",
-            text: "Are you sure you want to remove this archive from the tankoubon?",
-            icon: "warning",
-            showCancelButton: true,
-            confirmButtonColor: "#d33",
-            confirmButtonText: "Remove"
-        }).then((result) => {
-            if (result.isConfirmed) {
-                $.ajax({
-                    url: "api/tankoubons/" + tankId + "/archives/" + archiveId,
-                    type: "DELETE",
-                    success: function (data) {
-                        if (data.success) {
-                            LRR.toast({
-                                heading: "Success!",
-                                text: data.message,
-                                icon: "success"
-                            });
-                            // Remove the archive row from the table
-                            $("#archive-" + archiveId).remove();
-                            // Refresh the main list to update archive count
-                            Tankoubon.loadTankoubonList();
-                        } else {
-                            LRR.showErrorToast("Error removing archive: " + data.error);
-                        }
-                    },
-                    error: function (xhr, status, error) {
-                        LRR.showErrorToast("Error removing archive: " + error);
-                    }
-                });
-            }
-        });
-    },
-
-    /**
-     * Refresh the tankoubon list
-     */
-    refreshList: function () {
-        Tankoubon.loadTankoubonList();
-    },
-
-    /**
-     * View and manage archives in a tankoubon
-     */
-    viewArchives: function (tankId) {
-        $.ajax({
-            url: "api/tankoubons/" + tankId,
-            type: "GET",
-            success: function (tank) {
-                let html = "<div class='archive-list'>";
-                
-                // Add tankoubon management buttons at the top
-                html += "<div class='tankoubon-actions'>" +
-                    "<button class='stdbtn' onclick='Tankoubon.showEditTankoubonDialog(\"" + tankId + "\")'>" +
-                    "<i class='fas fa-edit'></i> Edit Name</button>" +
-                    "<button class='stdbtn delete-btn' onclick='Tankoubon.deleteTankoubon(\"" + tankId + "\")'>" +
-                    "<i class='fas fa-trash'></i> Delete Tankoubon</button>" +
-                    "</div>";
-                
-                if (!tank.archives || tank.archives.length === 0) {
-                    html += "<p class='empty-message'><i class='fas fa-book-open'></i><br>No archives in this tankoubon.<br>Add archives using the context menu in the main library view!</p>";
-                    html += "</div>";
-                    
-                    LRR.showPopUp({
-                        title: "Archives in " + tank.name + " (0 archives)",
-                        html: html,
-                        showCancelButton: true,
-                        confirmButtonText: "Close",
-                        width: "80%",
-                        customClass: {
-                            popup: "archive-dialog"
-                        }
-                    });
-                } else {
-                    html += "<table><thead><tr>" +
-                        "<th style='width: 60px'>Cover</th>" +
-                        "<th style='width: 60px'>Order</th>" +
-                        "<th>Title</th>" +
-                        "<th style='width: 200px'>Actions</th>" +
-                        "</tr></thead><tbody>";
-
-                    const archivePromises = tank.archives.map(function (archiveId) {
-                        return new Promise((resolve, reject) => {
-                            $.ajax({
-                                url: "api/archives/" + archiveId,
-                                type: "GET",
-                                success: resolve,
-                                error: reject
-                            });
-                        });
-                    });
-
-                    Promise.all(archivePromises).then(archives => {
-                        // Sort archives by their order in tank.archives (which maintains Redis score order)
-                        const archiveMap = new Map();
-                        tank.archives.forEach((id, index) => {
-                            archiveMap.set(id, index + 1);
-                        });
-
-                        archives.sort((a, b) => archiveMap.get(a.arcid) - archiveMap.get(b.arcid));
-
-                        archives.forEach(function (archive) {
-                            const currentOrder = archiveMap.get(archive.arcid);
-                            html += "<tr id='archive-" + archive.arcid + "'>" +
-                                "<td><img src='./api/archives/" + archive.arcid + "/thumbnail' class='thumbnail' style='max-width: 50px; height: auto;' /></td>" +
-                                "<td>" +
-                                "<input type='number' class='order-input' value='" + currentOrder + "' " +
-                                "min='1' max='" + archives.length + "' " +
-                                "data-archive-id='" + archive.arcid + "' " +
-                                "data-original-order='" + currentOrder + "' " +
-                                "style='width: 60px;'>" +
-                                "</td>" +
-                                "<td><a href='./reader?id=" + archive.arcid + "' target='_blank'>" + archive.title + "</a></td>" +
-                                "<td class='table-actions'>" +
-                                "<div class='button-group'>" +
-                                "<button class='stdbtn' onclick='Tankoubon.moveArchive(\"" + tankId + "\", \"" + archive.arcid + "\", \"up\")'>" +
-                                "<i class='fas fa-arrow-up'></i></button>" +
-                                "<button class='stdbtn' onclick='Tankoubon.moveArchive(\"" + tankId + "\", \"" + archive.arcid + "\", \"down\")'>" +
-                                "<i class='fas fa-arrow-down'></i></button>" +
-                                "<button class='stdbtn' onclick='Tankoubon.setAsCover(\"" + tankId + "\", \"" + archive.arcid + "\")'>" +
-                                "<i class='fas fa-image'></i></button>" +
-                                "<button class='stdbtn' onclick='Tankoubon.removeArchive(\"" + tankId + "\", \"" + archive.arcid + "\")'>" +
-                                "<i class='fas fa-times'></i></button>" +
-                                "</div>" +
-                                "</td></tr>";
-                        });
-
-                        html += "</tbody></table>";
-                        html += "<div class='order-actions'>" +
-                            "<button class='stdbtn' onclick='Tankoubon.saveOrder(\"" + tankId + "\")'>" +
-                            "<i class='fas fa-save'></i> Save Order</button>" +
-                            "</div>";
-                        html += "</div>";
-
-                        LRR.showPopUp({
-                            title: "Archives in " + tank.name + " (" + tank.archives.length + " archives)",
-                            html: html,
-                            showCancelButton: true,
-                            confirmButtonText: "Close",
-                            width: "80%",
-                            customClass: {
-                                popup: "archive-dialog"
-                            },
-                            didOpen: () => {
-                                // Add event listeners for order inputs
-                                $('.order-input').on('change', function() {
-                                    const newOrder = parseInt($(this).val());
-                                    const maxOrder = parseInt($(this).attr('max'));
-                                    if (newOrder < 1) $(this).val(1);
-                                    if (newOrder > maxOrder) $(this).val(maxOrder);
-                                });
-                            }
-                        });
-                    }).catch(error => {
-                        LRR.showErrorToast("Error loading archive details: " + error);
-                    });
-                }
-            },
-            error: function (xhr, status, error) {
-                LRR.showErrorToast("Error loading tankoubon: " + error);
-            }
-        });
-    },
-
-    /**
-     * Move an archive up or down in order
-     */
-    moveArchive: function (tankId, archiveId, direction) {
-        const row = $('#archive-' + archiveId);
-        const orderInput = row.find('.order-input');
-        const currentOrder = parseInt(orderInput.val());
-        const maxOrder = parseInt(orderInput.attr('max'));
-        
-        if (direction === "up" && currentOrder > 1) {
-            // Swap with previous archive
-            const prevRow = row.prev();
-            const prevInput = prevRow.find('.order-input');
-            orderInput.val(currentOrder - 1);
-            prevInput.val(currentOrder);
-            row.insertBefore(prevRow);
-        } else if (direction === "down" && currentOrder < maxOrder) {
-            // Swap with next archive
-            const nextRow = row.next();
-            const nextInput = nextRow.find('.order-input');
-            orderInput.val(currentOrder + 1);
-            nextInput.val(currentOrder);
-            row.insertAfter(nextRow);
-        }
-    },
-
-    /**
-     * Save the current order of archives
-     */
-    saveOrder: function (tankId) {
-        const newOrder = [];
-        $('.order-input').each(function() {
-            newOrder[parseInt($(this).val()) - 1] = $(this).data('archive-id');
-        });
-
-        $.ajax({
-            url: "api/tankoubons/" + tankId,
-            type: "PUT",
-            contentType: "application/json",
-            data: JSON.stringify({
-                archives: newOrder
-            }),
-            success: function (data) {
-                if (data.success) {
-                    LRR.toast({
-                        heading: "Success!",
-                        text: "Archive order updated!",
-                        icon: "success"
-                    });
-                } else {
-                    LRR.showErrorToast("Error updating archive order: " + data.error);
-                }
-            },
-            error: function (xhr, status, error) {
-                LRR.showErrorToast("Error updating archive order: " + error);
-            }
-        });
-    },
-
-    /**
-     * Set an archive as the cover for a tankoubon
-     */
-    setAsCover: function (tankId, archiveId) {
-        $.ajax({
-            url: "api/tankoubons/" + tankId,
-            type: "PUT",
-            contentType: "application/json",
-            data: JSON.stringify({
-                cover_archive: archiveId
-            }),
-            success: function (data) {
-                if (data.success) {
-                    LRR.toast({
-                        heading: "Success!",
-                        text: "Cover updated!",
-                        icon: "success"
-                    });
-                    Tankoubon.loadTankoubonList();
-                } else {
-                    LRR.showErrorToast("Error updating cover: " + data.error);
-                }
-            },
-            error: function (xhr, status, error) {
-                LRR.showErrorToast("Error updating cover: " + error);
-            }
-        });
-    },
-
-    /**
-     * Add an archive to a tankoubon from the archive view
-     */
-    addArchiveFromView: function (archiveId) {
-        $.ajax({
-            url: "api/tankoubons",
-            type: "GET",
-            success: function (tankoubons) {
-                let options = "";
-                
-                // Add option to create new tankoubon
-                options += `<option value="new">${I18N.NewTankoubon}</option>`;
-                options += `<option disabled>──────────</option>`;
-                
-                // Add existing tankoubons
-                tankoubons.forEach(tank => 
-                    options += `<option value="${tank.id}">${tank.name}</option>`
-                );
-
-                let html = `
-                    <div>
-                        <p>${I18N.SelectTankoubon}</p>
-                        <select id="tankoubon-select" class="favtag-btn">
-                            ${options}
-                        </select>
-                    </div>
-                `;
-
-                LRR.showPopUp({
-                    title: I18N.AddToTankoubon,
-                    html: html,
-                    showCancelButton: true,
-                    confirmButtonText: I18N.Add,
-                    preConfirm: () => {
-                        return $('#tankoubon-select').val();
-                    }
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        if (result.value === "new") {
-                            // Show dialog to create new tankoubon
-                            LRR.showPopUp({
-                                title: I18N.NewTankoubon,
-                                input: "text",
-                                inputValue: I18N.TankoubonDefaultName,
-                                showCancelButton: true,
-                                inputValidator: (value) => {
-                                    if (!value) {
-                                        return I18N.MissingTankoubonName;
-                                    }
-                                }
-                            }).then((createResult) => {
-                                if (createResult.isConfirmed) {
-                                    // Create tankoubon and add archive to it
-                                    $.ajax({
-                                        url: "api/tankoubons",
-                                        type: "PUT",
-                                        data: { name: createResult.value },
-                                        success: function (data) {
-                                            if (data.success) {
-                                                Tankoubon.addArchive(data.tankoubon_id, archiveId);
-                                            } else {
-                                                LRR.showErrorToast("Error creating tankoubon: " + data.error);
-                                            }
-                                        }
-                                    });
-                                }
-                            });
-                        } else {
-                            // Add to existing tankoubon
-                            Tankoubon.addArchive(result.value, archiveId);
-                        }
-                    }
-                });
-            },
-            error: function (xhr, status, error) {
-                LRR.showErrorToast("Error loading tankoubons: " + error);
+                LRR.showErrorToast("Error adding archive to tankoubon: " + error);
             }
         });
     }

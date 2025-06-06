@@ -23,43 +23,44 @@ my %TANK_METADATA = ( "name" => 0, "summary" => -1, "tags" => -2, "cover_archive
 
 # get_tankoubon_list(page)
 #   Returns a list of all the Tankoubon objects.
-sub get_tankoubon_list ( $page = 0 ) {
+sub get_tankoubon_list {
+    my ($page, $page_size) = @_;
+    my $redis = LANraragi::Model::Config::get_redis();
+    my $logger = get_logger("Tankoubon", "lanraragi");
 
-    my $redis  = LANraragi::Model::Config->get_redis;
-    my $logger = get_logger( "Tankoubon", "lanraragi" );
+    # Default to page 0 if not specified
+    $page = 0 unless defined $page;
 
-    $page //= 0;
+    # Use the provided page size or default to the configured value
+    $page_size = LANraragi::Model::Config::get_pagesize() unless defined $page_size;
 
-    # Tankoubons are represented by TANK_[timestamp] in DB. Can't wait for 2038!
-    my @tanks = $redis->keys('TANK_??????????');
+    # Get all tankoubon IDs using pattern matching
+    my @tank_ids = sort $redis->keys('TANK_??????????');
+    my $total = scalar @tank_ids;
 
-    # Jam tanks into an array of hashes
-    my @result;
-    foreach my $key ( sort @tanks ) {
-        my ( $total, $filtered, %data ) = get_tankoubon($key);
-        
-        # Add the archive count to the data
-        my $archive_count = $redis->zcount($key, 1, "+inf");
-        $data{archive_count} = $archive_count;
-        
-        push( @result, \%data );
+    # Calculate start and end indices for pagination
+    my $start = $page * $page_size;
+    my $end = $start + $page_size - 1;
+    $end = $total - 1 if $end >= $total;
+
+    # Get the paginated subset of tankoubon IDs
+    my @paginated_ids = @tank_ids[$start..$end];
+    my $filtered = scalar @paginated_ids;
+
+    # Get tankoubon data for the paginated IDs
+    my @tanks;
+    foreach my $id (@paginated_ids) {
+        my ($total, $filtered, %tank) = get_tankoubon($id);
+        if (%tank) {
+            # Add the archive count to the data
+            my $archive_count = $redis->zcount($id, 1, "+inf");
+            $tank{archive_count} = $archive_count;
+            push @tanks, \%tank;
+        }
     }
 
-    # Only get the first X keys
-    my $keysperpage = LANraragi::Model::Config->get_pagesize;
-
-    # Return total keys and the filtered ones
-    my $total = $#tanks + 1;
-    my $start = ($page + 0) * $keysperpage;  # Force numeric context for $page
-    my $end   = min( $start + $keysperpage - 1, $#result );
-
-    if ( $page < 0 ) {
-        return ( $total, $total, @result );
-    } else {
-        return ( $total, $#result + 1, @result[ $start .. $end ] );
-    }
-
-    #return @result;
+    $redis->quit();
+    return ($total, $filtered, @tanks);
 }
 
 # create_tankoubon(name, existing_id)
@@ -72,8 +73,14 @@ sub create_tankoubon ( $name, $tank_id ) {
     my $redis_search = LANraragi::Model::Config->get_redis_search;
     my $logger       = get_logger( "Tankoubon", "lanraragi" );
 
+    # Validate name
+    unless (defined $name && $name ne "") {
+        $logger->error("Cannot create tankoubon: Name is undefined or empty");
+        return undef;
+    }
+
     # Set all fields of the group object
-    unless ( length($tank_id) ) {
+    unless ( defined $tank_id && length($tank_id) ) {
         $tank_id = "TANK_" . time();
 
         my $isnewkey = 0;
@@ -122,20 +129,24 @@ sub create_tankoubon ( $name, $tank_id ) {
 #   Returns the Tankoubon matching the given id.
 #   Returns undef if the id doesn't exist.
 sub get_tankoubon ( $tank_id, $fulldata = 0, $page = 0 ) {
-
     my $logger      = get_logger( "Tankoubon", "lanraragi" );
     my $redis       = LANraragi::Model::Config->get_redis;
     my $keysperpage = LANraragi::Model::Config->get_pagesize;
 
     $page //= 0;
 
+    unless (defined $tank_id) {
+        $logger->error("No Tankoubon ID provided (undefined)");
+        return ();
+    }
+
     if ( $tank_id eq "" ) {
-        $logger->debug("No Tankoubon ID provided.");
+        $logger->error("No Tankoubon ID provided (empty string)");
         return ();
     }
 
     unless ( length($tank_id) == 15 && $redis->exists($tank_id) ) {
-        $logger->warn("$tank_id doesn't exist in the database!");
+        $logger->warn("$tank_id doesn't exist in the database or has invalid length!");
         return ();
     }
 
@@ -155,10 +166,8 @@ sub get_tankoubon ( $tank_id, $fulldata = 0, $page = 0 ) {
         %tankoubon = $redis->zrangebyscore( $tank_id, 1, "+inf", "WITHSCORES", @limit );
     }
 
-    # Sort and add IDs to archives array
-    foreach my $i ( sort { $tankoubon{$a} cmp $tankoubon{$b} } keys %tankoubon ) {
-        push( @archives, $i );
-    }
+    # Sort and add IDs to archives array based on their scores
+    @archives = sort { $tankoubon{$a} <=> $tankoubon{$b} } keys %tankoubon;
 
     # Verify if we require fulldata files or just IDs
     if ($fulldata) {
@@ -230,10 +239,19 @@ sub delete_tankoubon ($tank_id) {
 #   Updates metadata and archive list.
 #   Returns 1 on success, 0 on failure alongside an error message.
 sub update_tankoubon ( $tank_id, $data ) {
+    my $logger = get_logger( "Tankoubon", "lanraragi" );
+
+    unless (defined $tank_id && length($tank_id) == 15) {
+        return (0, "Invalid or undefined tankoubon ID");
+    }
+
+    unless (defined $data) {
+        return (0, "No update data provided");
+    }
 
     my ( $result, $err ) = update_metadata( $tank_id, $data );
     if ($result) {
-        my ( $result, $err ) = update_archive_list( $tank_id, $data );
+        ( $result, $err ) = update_archive_list( $tank_id, $data );
     }
 
     return ( $result, $err );

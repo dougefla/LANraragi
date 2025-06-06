@@ -19,8 +19,15 @@ no warnings 'redefine';
 
 sub get_tankoubon_list {
     my $self = shift;
-    my ($total, $filtered, @tanks) = LANraragi::Model::Tankoubon::get_tankoubon_list;
-    $self->render(json => \@tanks);
+    my $page = $self->param('page') || 0;
+    my $size = $self->param('size');
+
+    my ($total, $filtered, @tanks) = LANraragi::Model::Tankoubon::get_tankoubon_list($page, $size);
+    $self->render(json => {
+        total => $total,
+        filtered => $filtered,
+        result => \@tanks
+    });
 }
 
 sub get_tankoubon {

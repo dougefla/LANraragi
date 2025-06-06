@@ -82,7 +82,7 @@ sub natural_sort_key {
     # Pad numbers with zeros for proper sorting
     for my $chunk (@chunks) {
         if ($chunk =~ /^\d+$/) {
-            $chunk = sprintf("%09d", $chunk);
+            $chunk = sprintf("%09d", int($chunk));
         }
     }
     
@@ -237,8 +237,27 @@ sub extract_number {
     my $number = 0;
     
     if ($lang eq 'jp' || $lang eq 'cn') {
+        # Handle special cases first
+        if ($title =~ /最終話/) {
+            return 99999;  # Return a very high number for final chapter
+        }
+        
         # Try various Japanese/Chinese number patterns
-        if ($title =~ /第([0-9０-９一二三四五六七八九十]+)[巻話]/ ||  # 第X巻/話
+        # First try to match 第X話 pattern (most common for chapters)
+        if ($title =~ /第([0-9０-９一二三四五六七八九十]+)話/) {
+            my $num = $1;
+            # Convert Japanese numerals to Arabic numerals if needed
+            if ($num =~ /[一二三四五六七八九十]/) {
+                $num =~ tr/一二三四五六七八九十/1234567890/;
+            }
+            # Convert full-width numbers to half-width
+            $num =~ tr/０-９/0-9/;
+            # Ensure we return a number, not a string
+            return int($num);
+        }
+        
+        # Then try other patterns
+        if ($title =~ /第([0-9０-９一二三四五六七八九十]+)[巻]/ ||  # 第X巻
             $title =~ /([0-9０-９一二三四五六七八九十]+)$/ ||         # Ends with number
             $title =~ /([0-9０-９一二三四五六七八九十]+)\s*[（\(]/ || # Number before parenthesis
             $title =~ /([0-9０-９一二三四五六七八九十]+)(?:\s|$)/) {  # Number followed by space or end
@@ -250,16 +269,17 @@ sub extract_number {
             }
             # Convert full-width numbers to half-width
             $num =~ tr/０-９/0-9/;
-            $number = $num;
+            # Ensure we return a number, not a string
+            return int($num);
         }
     } else {
         # For English titles, try common patterns
         if ($title =~ /(?:vol(?:ume)?\.?\s*(\d+)|ch(?:apter)?\.?\s*(\d+)|\((\d+)\)|\s(\d+)(?:st|nd|rd|th)?(?:\s|$))/i) {
-            $number = $1 || $2 || $3 || $4;
+            return int($1 || $2 || $3 || $4);
         }
     }
     
-    return $number || 0;  # Return 0 if no number found
+    return 0;  # Return 0 if no number found
 }
 
 # Mandatory function to be implemented by your script
@@ -386,7 +406,10 @@ sub run_script {
                 
                 # Sort archives by natural sort of title if numbers are the same
                 @archives = sort { 
-                    my $num_diff = $a->{number} <=> $b->{number};
+                    # Convert both numbers to integers for proper numeric comparison
+                    my $num_a = int($a->{number} || 0);
+                    my $num_b = int($b->{number} || 0);
+                    my $num_diff = $num_a <=> $num_b;
                     return $num_diff if $num_diff != 0;
                     return natural_sort_key($a->{title}) cmp natural_sort_key($b->{title});
                 } @archives;
@@ -402,6 +425,7 @@ sub run_script {
                 # Add archives to tankoubon in order
                 my $first_archive;
                 my $success = 1;
+                my $archive_index = 1;  # Start index at 1
                 foreach my $archive (@archives) {
                     unless ($archive && $archive->{id}) {  # Skip invalid archives
                         $logger->warn("Invalid archive data found, skipping");
@@ -409,7 +433,7 @@ sub run_script {
                         last;
                     }
                     
-                    $logger->debug("Adding archive " . $archive->{id} . " to tankoubon $tank_id");
+                    $logger->debug("Adding archive " . $archive->{title} . " (" . $archive->{id} . ") to tankoubon $tank_id");
                     my ($result, $error) = LANraragi::Model::Tankoubon::add_to_tankoubon($tank_id, $archive->{id});
                     unless ($result) {
                         $logger->error("Failed to add archive to tankoubon: $error");
@@ -419,6 +443,52 @@ sub run_script {
                     
                     # Keep track of first archive for cover and tags
                     $first_archive = $archive unless $first_archive;
+                    $archive_index++;
+                }
+
+                # log the archives in the tankoubon
+                $logger->debug("Getting tankoubon data for $tank_id");
+                my ($total, $filtered, %tank) = eval { LANraragi::Model::Tankoubon::get_tankoubon($tank_id) };
+                if ($@) {
+                    $logger->error("Error getting tankoubon data: $@");
+                } else {
+                    $logger->debug("Got tankoubon data: total=$total, filtered=$filtered");
+                    
+                    if (%tank) {
+                        $logger->debug("Tank exists with name: " . ($tank{name} || "NO NAME"));
+                        if (exists $tank{archives}) {
+                            my @archive_ids = @{$tank{archives}};
+                            $logger->debug("Found " . scalar(@archive_ids) . " archive IDs in tankoubon");
+                            
+                            eval {
+                                my @archive_data = get_archive_json_multi(@archive_ids);
+                                $logger->debug("Got " . scalar(@archive_data) . " archive data entries");
+                                if (@archive_data) {
+                                    # Sort archive data by chapter number
+                                    @archive_data = sort {
+                                        my $num_a = extract_number($a->{title});
+                                        my $num_b = extract_number($b->{title});
+                                        my $num_diff = $num_a <=> $num_b;
+                                        return $num_diff if $num_diff != 0;
+                                        return natural_sort_key($a->{title}) cmp natural_sort_key($b->{title});
+                                    } @archive_data;
+                                    
+                                    $logger->debug("Archives in tankoubon $tank_id: " . join(", ", map { $_->{title} } @archive_data));
+                                    # Add a small delay to ensure logs are written
+                                    select(undef, undef, undef, 0.1);
+                                } else {
+                                    $logger->error("No archive data returned from get_archive_json_multi");
+                                }
+                            };
+                            if ($@) {
+                                $logger->error("Error getting archive data: $@");
+                            }
+                        } else {
+                            $logger->error("No archives key in tank data");
+                        }
+                    } else {
+                        $logger->error("Empty tank data returned");
+                    }
                 }
                 
                 # If we failed to add any archives, delete the tankoubon and continue
