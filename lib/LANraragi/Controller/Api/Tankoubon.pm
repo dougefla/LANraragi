@@ -21,8 +21,10 @@ sub get_tankoubon_list {
     my $self = shift;
     my $page = $self->param('page') || 0;
     my $size = $self->param('size');
+    my $sort = $self->param('sort') || 'name';
+    my $order = $self->param('order') || 'asc';
 
-    my ($total, $filtered, @tanks) = LANraragi::Model::Tankoubon::get_tankoubon_list($page, $size);
+    my ($total, $filtered, @tanks) = LANraragi::Model::Tankoubon::get_tankoubon_list($page, $size, $sort, $order);
     $self->render(json => {
         total => $total,
         filtered => $filtered,

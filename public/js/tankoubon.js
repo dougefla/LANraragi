@@ -5,9 +5,8 @@ window.Tankoubon = {
     currentPage: 0,
     totalPages: 0,
     pageSize: 100,  // Default page size
-    searchQuery: '',
-    sortBy: 'name',
-    sortOrder: 'asc',
+    sortBy: localStorage.getItem('tankoubon-sort-by') || 'name',
+    sortOrder: localStorage.getItem('tankoubon-sort-order') || 'asc',
 
     /**
      * Initialize the page
@@ -18,54 +17,34 @@ window.Tankoubon = {
         $("#refresh").click(this.refreshList);
         $("#return").click(() => { window.location.href = "."; });
 
-        // Search functionality
-        $("#search-input").on('input', this.debounce(() => {
-            this.searchQuery = $("#search-input").val();
-            this.currentPage = 0;
-            this.loadTankoubonList();
-        }, 300));
-
-        $("#search-btn").click(() => {
-            this.searchQuery = $("#search-input").val();
-            this.currentPage = 0;
-            this.loadTankoubonList();
-        });
-
-        $("#clear-search").click(() => {
-            $("#search-input").val('');
-            this.searchQuery = '';
-            this.currentPage = 0;
-            this.loadTankoubonList();
-        });
-
         // Sort functionality
+        $("#sort-by").val(this.sortBy);  // Set initial sort option
         $("#sort-by").change(() => {
             this.sortBy = $("#sort-by").val();
+            localStorage.setItem('tankoubon-sort-by', this.sortBy);
             this.currentPage = 0;
             this.loadTankoubonList();
         });
 
-        $("#sort-order").click((e) => {
+        // Initialize sort order button state
+        $(".sort-order").addClass(this.sortOrder);
+        $(".sort-order").off('click').on('click', (e) => {
             e.preventDefault();
+            e.stopPropagation();
             this.sortOrder = this.sortOrder === 'asc' ? 'desc' : 'asc';
-            $(e.target).toggleClass('fa-sort-alpha-down fa-sort-alpha-up');
+            localStorage.setItem('tankoubon-sort-order', this.sortOrder);
+            $(".sort-order").removeClass('asc desc').addClass(this.sortOrder);
             this.loadTankoubonList();
+            return false;
         });
 
         // View toggle buttons
-        $("#list-view").click((e) => {
+        $(".grid-toggle, .list-toggle").click((e) => {
             e.preventDefault();
+            const isGrid = $(e.target).hasClass('grid-toggle');
             $(".mode-toggle").removeClass('active');
-            $("#list-view").addClass('active');
-            localStorage.setItem('tankoubon-view', 'list');
-            this.loadTankoubonList();
-        });
-
-        $("#grid-view").click((e) => {
-            e.preventDefault();
-            $(".mode-toggle").removeClass('active');
-            $("#grid-view").addClass('active');
-            localStorage.setItem('tankoubon-view', 'grid');
+            $(e.target).addClass('active');
+            localStorage.setItem('tankoubon-view', isGrid ? 'grid' : 'list');
             this.loadTankoubonList();
         });
 
@@ -89,11 +68,11 @@ window.Tankoubon = {
         });
 
         // Set initial view based on localStorage
-        const viewMode = localStorage.getItem('tankoubon-view') || 'list';
-        if (viewMode === 'grid') {
-            $("#grid-view").click();
+        const viewMode = localStorage.getItem('tankoubon-view') || 'grid';
+        if (viewMode === 'list') {
+            $(".list-toggle").click();
         } else {
-            $("#list-view").addClass('active');
+            $(".grid-toggle").addClass('active');
         }
 
         // Initialize context menu
@@ -129,66 +108,10 @@ window.Tankoubon = {
     },
 
     /**
-     * Debounce function for search input
-     */
-    debounce: function(func, wait) {
-        let timeout;
-        return function executedFunction(...args) {
-            const later = () => {
-                clearTimeout(timeout);
-                func(...args);
-            };
-            clearTimeout(timeout);
-            timeout = setTimeout(later, wait);
-        };
-    },
-
-    /**
-     * Update the page select dropdown with the current number of pages
-     */
-    updatePageSelect: function() {
-        const $pageSelect = $("#page-select");
-        $pageSelect.empty();
-        
-        for (let i = 1; i <= this.totalPages; i++) {
-            $pageSelect.append($('<option>', {
-                value: i,
-                text: i,
-                selected: i === this.currentPage + 1
-            }));
-        }
-    },
-
-    /**
-     * Get a preview image for a tankoubon from its first archive
-     */
-    getTankoubonPreview: function (tankId) {
-        return new Promise((resolve, reject) => {
-            $.ajax({
-                url: "api/tankoubons/" + tankId,
-                type: "GET",
-                success: function(tank) {
-                    if (tank.cover_archive) {
-                        resolve("./api/archives/" + tank.cover_archive + "/thumbnail");
-                    } else if (tank.archives && tank.archives.length > 0) {
-                        resolve("./api/archives/" + tank.archives[0] + "/thumbnail");
-                    } else {
-                        resolve(null);
-                    }
-                },
-                error: function(error) {
-                    console.error("Error getting tankoubon preview:", error);
-                    resolve(null);
-                }
-            });
-        });
-    },
-
-    /**
      * Load the list of tankoubon
      */
     loadTankoubonList: function () {
-        const viewMode = localStorage.getItem('tankoubon-view') || 'list';
+        const viewMode = localStorage.getItem('tankoubon-view') || 'grid';
         const params = {
             page: this.currentPage,
             size: this.pageSize,
@@ -196,9 +119,12 @@ window.Tankoubon = {
             order: this.sortOrder
         };
 
-        if (this.searchQuery) {
-            params.search = this.searchQuery;
-        }
+        // Update URL with current parameters
+        const url = new URL(window.location);
+        url.searchParams.set('page', this.currentPage);
+        url.searchParams.set('sort', this.sortBy);
+        url.searchParams.set('order', this.sortOrder);
+        window.history.replaceState({}, '', url);
 
         // Show loading indicator
         $("#loading-indicator").show();
@@ -228,7 +154,7 @@ window.Tankoubon = {
 
                     data.forEach(function (tank) {
                         const archiveCount = tank.archive_count || 0;
-                        const lastModified = tank.last_modified ? new Date(tank.last_modified * 1000).toLocaleString() : "Never";
+                        const lastModified = tank.last_updated ? new Date(tank.last_updated * 1000).toLocaleString() : "Never";
                         
                         html += "<tr class='tankoubon-item' data-tank-id='" + tank.id + "' style='cursor: pointer;'>" +
                             "<td class='tank-name'>" + tank.name + "</td>" +
@@ -251,9 +177,11 @@ window.Tankoubon = {
                     Promise.all(previewPromises).then(tanksWithPreviews => {
                         tanksWithPreviews.forEach(tank => {
                             const archiveCount = tank.archive_count || 0;
-                            const lastModified = tank.last_modified ? new Date(tank.last_modified * 1000).toLocaleString() : "Never";
                             
                             html += "<div class='tankoubon-item tankoubon-card' data-tank-id='" + tank.id + "'>" +
+                                "<div class='info'>" +
+                                "<div class='name'>" + tank.name + "</div>" +
+                                "</div>" +
                                 "<div class='preview'>";
                             
                             if (tank.previewUrl) {
@@ -264,12 +192,6 @@ window.Tankoubon = {
 
                             html += "</div>" +
                                 "<div class='archive-count'><i class='fas fa-book'></i> " + archiveCount + "</div>" +
-                                "<div class='info'>" +
-                                "<div class='name'>" + tank.name + "</div>" +
-                                "<div class='stats'>" +
-                                "<span title='" + lastModified + "'><i class='fas fa-clock'></i></span>" +
-                                "</div>" +
-                                "</div>" +
                                 "</div>";
                         });
 
@@ -468,34 +390,44 @@ window.Tankoubon = {
     },
 
     /**
-     * Add an archive to a tankoubon
-     * @param {string} tankId The ID of the tankoubon
-     * @param {string} archiveId The ID of the archive to add
+     * Get a preview image for a tankoubon from its first archive
      */
-    addArchive: function(tankId, archiveId) {
-        // Ensure we're using the correct API endpoint
-        const baseUrl = window.location.pathname.includes('/tankoubon/') ? '../' : '';
-        $.ajax({
-            url: `${baseUrl}api/tankoubons/${tankId}/archives/${archiveId}`,
-            type: "PUT",
-            success: function(response) {
-                if (response.success) {
-                    LRR.showSuccessToast(response.successMessage || "Archive added to tankoubon successfully!");
-                    // Refresh the page if we're on a tankoubon page
-                    if (window.location.pathname.includes('/tankoubon/')) {
-                        window.location.reload();
-                    } else if (IndexTable.dataTable && IndexTable.dataTable.ajax) {
-                        // Otherwise just refresh the datatable
-                        IndexTable.dataTable.ajax.reload();
+    getTankoubonPreview: function (tankId) {
+        return new Promise((resolve, reject) => {
+            $.ajax({
+                url: "api/tankoubons/" + tankId,
+                type: "GET",
+                success: function(tank) {
+                    if (tank.cover_archive) {
+                        resolve("./api/archives/" + tank.cover_archive + "/thumbnail");
+                    } else if (tank.archives && tank.archives.length > 0) {
+                        resolve("./api/archives/" + tank.archives[0] + "/thumbnail");
+                    } else {
+                        resolve(null);
                     }
-                } else {
-                    LRR.showErrorToast(response.error || "Error adding archive to tankoubon");
+                },
+                error: function(error) {
+                    console.error("Error getting tankoubon preview:", error);
+                    resolve(null);
                 }
-            },
-            error: function(xhr, status, error) {
-                LRR.showErrorToast("Error adding archive to tankoubon: " + error);
-            }
+            });
         });
+    },
+
+    /**
+     * Update the page select dropdown with the current number of pages
+     */
+    updatePageSelect: function() {
+        const $pageSelect = $("#page-select");
+        $pageSelect.empty();
+        
+        for (let i = 1; i <= this.totalPages; i++) {
+            $pageSelect.append($('<option>', {
+                value: i,
+                text: i,
+                selected: i === this.currentPage + 1
+            }));
+        }
     }
 };
 

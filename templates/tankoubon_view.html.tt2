@@ -15,16 +15,14 @@
     <style>
         .tankoubon-header {
             display: flex;
-            gap: 20px;
-            margin-bottom: 30px;
-            padding: 20px;
-            background: #363940;
-            border-radius: 9px;
+            gap: 16px;
+            margin-bottom: 8px;
+            padding: 8px;
         }
 
         .tankoubon-cover {
-            width: 250px;
-            height: 350px;
+            width: 200px;
+            height: 280px;
             overflow: hidden;
             border-radius: 9px;
             background: #2a2a2a;
@@ -41,47 +39,139 @@
 
         .tankoubon-info {
             flex: 1;
+            min-width: 0;
         }
 
         .tankoubon-title {
-            font-size: 24px;
-            margin-bottom: 15px;
+            font-size: 20px;
+            margin-bottom: 10px;
         }
 
         .tankoubon-stats {
             color: #999;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
+            font-size: 0.9em;
         }
 
         .tag-list {
-            line-height: 1.6;
+            line-height: 1.4;
             color: #ccc;
             word-wrap: break-word;
+            font-size: 0.9em;
+        }
+
+        .episode-nav {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin: 15px 0;
+            padding: 10px;
+            background: #2a2a2a;
+            border-radius: 4px;
+            justify-content: center;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .episode-nav-item {
+            position: relative;
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #363940;
+            border-radius: 3px;
+            color: #fff;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid #4f535b;
+        }
+
+        .episode-nav-item:hover {
+            background: #4f535b;
+            transform: translateY(-1px);
+        }
+
+        .episode-nav-item.current {
+            background: #4a9eff;
+            border-color: #4a9eff;
+        }
+
+        .episode-nav-item.read {
+            background: #28a745;
+            border-color: #28a745;
+        }
+
+        .episode-nav-item.reading {
+            background: #ffc107;
+            border-color: #ffc107;
+            color: #000;
+        }
+
+        .episode-nav-tooltip {
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            white-space: nowrap;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            margin-bottom: 8px;
+            z-index: 100;
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .episode-nav-item:hover .episode-nav-tooltip {
+            opacity: 1;
+        }
+
+        .episode-nav-tooltip::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border-width: 4px;
+            border-style: solid;
+            border-color: rgba(0, 0, 0, 0.8) transparent transparent transparent;
         }
 
         .tankoubon-actions {
             display: flex;
-            flex-direction: column;
-            gap: 10px;
-            margin-top: 20px;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 8px;
+            justify-content: center;
         }
 
         .tankoubon-actions .stdbtn {
-            width: 200px;
-            padding: 10px 16px;
-            font-size: 14px;
+            padding: 8px 12px;
+            font-size: 13px;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
+            min-width: 120px;
+            justify-content: center;
         }
 
         .tankoubon-actions .stdbtn i {
-            width: 16px;
+            width: 14px;
             text-align: center;
         }
 
         .tankoubon-actions .delete-btn {
-            margin-top: 10px;
+            margin-top: 0;
             background-color: #dc3545;
             color: white;
         }
@@ -90,71 +180,92 @@
             background-color: #c82333;
         }
 
-        .view-modes {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            padding: 10px;
-            background: #2a2a2a;
-            border-radius: 5px;
-        }
-
-        .view-mode-btn {
-            padding: 8px 16px;
-            opacity: 0.6;
-        }
-
-        .view-mode-btn.active {
-            opacity: 1;
-            background-color: #4f535b;
-            color: white;
+        .episode-nav-container {
+            background: rgba(54, 57, 64, 0.6);
+            padding: 8px;
+            border-radius: 4px;
+            max-width: 600px;
+            margin: 0 auto 8px;
         }
 
         .archive-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 15px;
-            padding: 15px;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 2px;
+            padding: 2px;
         }
 
         .archive-card {
-            background: #363940;
-            border-radius: 9px;
-            padding: 10px;
-            text-align: center;
+            background: none repeat scroll 0 0 #43464E;
+            border: 1px none;
+            border-radius: 4px;
+            display: inline-block;
+            margin: 1px;
+            padding: 1px;
+            vertical-align: top;
+            min-height: 265px;
             cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
         }
 
         .archive-card:hover {
             transform: translateY(-2px);
-            transition: transform 0.2s ease;
-        }
-
-        .archive-card img {
-            max-width: 100%;
-            height: auto;
-            border-radius: 5px;
-            margin-bottom: 10px;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.1);
         }
 
         .archive-card .title {
-            font-size: 14px;
-            margin-bottom: 10px;
-            word-break: break-word;
+            font-family: "Geist", arial, sans-serif;
+            font-weight: bold;
+            margin: 4px auto;
+            text-align: center;
+            width: 98%;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-size: 8pt;
+            padding: 1px 0;
+            min-height: 16px;
+            order: -1;  /* Move to the top */
+            flex: 0 0 auto;
+        }
+
+        .archive-card img {
+            max-width: 99%;
+            max-height: 242px;
+            object-fit: contain;
+            border-radius: 3px;
+            vertical-align: middle;
+            margin: auto;
+        }
+
+        .archive-card .thumbnail-container {
+            height: 245px;
+            margin: 0 auto;
+            overflow: hidden;
+            position: relative;
+            text-align: center;
+            flex: 1 0 245px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .archive-list {
-            padding: 15px;
+            padding: 10px;
         }
 
         .archive-list-item {
             display: flex;
             align-items: center;
-            gap: 15px;
-            padding: 10px;
+            gap: 12px;
+            padding: 8px;
             background: #363940;
-            border-radius: 5px;
-            margin-bottom: 10px;
+            border-radius: 4px;
+            margin-bottom: 8px;
             cursor: pointer;
         }
 
@@ -164,8 +275,8 @@
         }
 
         .archive-list-item img {
-            width: 50px;
-            height: 70px;
+            width: 40px;
+            height: 56px;
             object-fit: cover;
             border-radius: 3px;
         }
@@ -175,32 +286,32 @@
         }
 
         .archive-list-item .title {
-            font-size: 16px;
-            margin-bottom: 5px;
+            font-size: 14px;
+            margin-bottom: 4px;
         }
 
         .archive-list-item .stats {
-            font-size: 12px;
+            font-size: 11px;
             color: #999;
         }
 
         .continuous-view {
-            padding: 15px;
+            padding: 10px;
         }
 
         .continuous-view img {
             max-width: 100%;
             height: auto;
-            margin-bottom: 20px;
-            border-radius: 5px;
+            margin-bottom: 15px;
+            border-radius: 4px;
         }
 
         .progress-indicator {
             display: inline-block;
-            padding: 3px 8px;
-            border-radius: 3px;
-            font-size: 12px;
-            margin-left: 10px;
+            padding: 1px 4px;
+            border-radius: 2px;
+            font-size: 10px;
+            margin-left: 4px;
         }
 
         .progress-new {
@@ -219,18 +330,18 @@
         }
 
         .quick-episode-menu {
-            margin-bottom: 15px;
+            margin-bottom: 12px;
         }
 
         .episode-select {
             width: 100%;
-            max-width: 300px;
-            padding: 8px 12px;
+            max-width: 250px;
+            padding: 6px 10px;
             border: 1px solid #4f535b;
-            border-radius: 5px;
+            border-radius: 4px;
             background: #2a2a2a;
             color: #fff;
-            font-size: 14px;
+            font-size: 13px;
             cursor: pointer;
         }
 
@@ -242,7 +353,65 @@
         .episode-select option {
             background: #2a2a2a;
             color: #fff;
-            padding: 8px;
+            padding: 6px;
+        }
+
+        @media (max-width: 768px) {
+            .tankoubon-header {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .tankoubon-cover {
+                width: 160px;
+                height: 224px;
+                margin: 0 auto;
+            }
+
+            .tankoubon-actions {
+                justify-content: center;
+            }
+
+            .archive-grid {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            }
+
+            .episode-nav {
+                justify-content: center;
+                padding: 8px;
+            }
+
+            .episode-nav-item {
+                width: 24px;
+                height: 24px;
+                font-size: 11px;
+            }
+
+            .archive-card {
+                min-height: 240px;
+            }
+
+            .archive-card .thumbnail-container {
+                height: 190px;
+            }
+
+            .archive-card img {
+                max-height: 185px;
+            }
+        }
+
+        @font-face {
+            font-family: "Geist";
+            font-style: normal;
+            font-weight: bold;
+            src: url(../css/webfonts/Geist-Regular.woff2) format("woff2");
+        }
+
+        @font-face {
+            font-family: "Geist";
+            font-style: normal;
+            font-weight: bold;
+            src: url(../css/webfonts/Geist-SemiBold.woff2) format("woff2");
         }
     </style>
 
@@ -311,11 +480,6 @@
             </div>
             <div class='tankoubon-info'>
                 <h2 class='tankoubon-title'>[% tank.name %]</h2>
-                <div class='quick-episode-menu'>
-                    <select id='episode-selector' class='episode-select' onchange='TankoubonView.jumpToEpisode(this.value)'>
-                        <option value=''>Select Episode...</option>
-                    </select>
-                </div>
                 <div class='tankoubon-stats'>
                     <div>[% tank.archives.size %] Archives</div>
                     [% IF tank.tags %]
@@ -342,19 +506,10 @@
                         <i class='fas fa-trash-alt'></i> [% c.lh("Delete (All)") %]
                     </button>
                 </div>
+                <div class='episode-nav' id='episode-nav'>
+                    <!-- Episodes will be loaded here by JavaScript -->
+                </div>
             </div>
-        </div>
-
-        <div class='view-modes'>
-            <button class='stdbtn view-mode-btn active' data-mode='grid'>
-                <i class='fas fa-th'></i> [% c.lh("Grid View") %]
-            </button>
-            <button class='stdbtn view-mode-btn' data-mode='list'>
-                <i class='fas fa-list'></i> [% c.lh("List View") %]
-            </button>
-            <button class='stdbtn view-mode-btn' data-mode='continuous'>
-                <i class='fas fa-scroll'></i> [% c.lh("Continuous View") %]
-            </button>
         </div>
 
         <div id='archives-container'>

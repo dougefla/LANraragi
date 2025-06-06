@@ -1798,3 +1798,9 @@ msgstr "删除所有分类时出错"
 
 msgid "Add to Tankoubon"
 msgstr "添加到单行本"
+
+msgid "No tankoubons found"
+msgstr "未找到单行本"
+
+msgid "Delete (All)"
+msgstr "删除（全部）"

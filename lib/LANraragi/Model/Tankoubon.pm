@@ -24,7 +24,7 @@ my %TANK_METADATA = ( "name" => 0, "summary" => -1, "tags" => -2, "cover_archive
 # get_tankoubon_list(page)
 #   Returns a list of all the Tankoubon objects.
 sub get_tankoubon_list {
-    my ($page, $page_size) = @_;
+    my ($page, $page_size, $sort_by, $sort_order) = @_;
     my $redis = LANraragi::Model::Config::get_redis();
     my $logger = get_logger("Tankoubon", "lanraragi");
 
@@ -34,33 +34,68 @@ sub get_tankoubon_list {
     # Use the provided page size or default to the configured value
     $page_size = LANraragi::Model::Config::get_pagesize() unless defined $page_size;
 
+    # Default sort parameters
+    $sort_by = 'name' unless defined $sort_by;
+    $sort_order = 'asc' unless defined $sort_order;
+
     # Get all tankoubon IDs using pattern matching
     my @tank_ids = sort $redis->keys('TANK_??????????');
     my $total = scalar @tank_ids;
+
+    # Get tankoubon data for all IDs
+    my @tanks;
+    foreach my $id (@tank_ids) {
+        my ($total, $filtered, %tank) = get_tankoubon($id);
+        if (%tank) {
+            # Add the archive count to the data
+            my $archive_count = $redis->zcount($id, 1, "+inf");
+            $tank{archive_count} = $archive_count;
+            
+            # Add last_updated timestamp from the ID (TANK_timestamp)
+            my ($timestamp) = $id =~ /TANK_(\d+)/;
+            $tank{last_updated} = $timestamp || 0;
+            
+            push @tanks, \%tank;
+        }
+    }
+
+    # Sort the tanks array based on sort parameters
+    @tanks = sort {
+        my ($result, $a_val, $b_val);
+        
+        if ($sort_by eq 'name') {
+            $a_val = lc($a->{name});
+            $b_val = lc($b->{name});
+            $result = $a_val cmp $b_val;
+        }
+        elsif ($sort_by eq 'date_added' || $sort_by eq 'last_updated') {
+            $a_val = $a->{last_updated} || 0;
+            $b_val = $b->{last_updated} || 0;
+            $result = $a_val <=> $b_val;
+        }
+        elsif ($sort_by eq 'archive_count') {
+            $a_val = $a->{archive_count} || 0;
+            $b_val = $b->{archive_count} || 0;
+            $result = $a_val <=> $b_val;
+        }
+        else {
+            $result = 0;
+        }
+        
+        return $sort_order eq 'desc' ? -$result : $result;
+    } @tanks;
 
     # Calculate start and end indices for pagination
     my $start = $page * $page_size;
     my $end = $start + $page_size - 1;
     $end = $total - 1 if $end >= $total;
 
-    # Get the paginated subset of tankoubon IDs
-    my @paginated_ids = @tank_ids[$start..$end];
-    my $filtered = scalar @paginated_ids;
-
-    # Get tankoubon data for the paginated IDs
-    my @tanks;
-    foreach my $id (@paginated_ids) {
-        my ($total, $filtered, %tank) = get_tankoubon($id);
-        if (%tank) {
-            # Add the archive count to the data
-            my $archive_count = $redis->zcount($id, 1, "+inf");
-            $tank{archive_count} = $archive_count;
-            push @tanks, \%tank;
-        }
-    }
+    # Get the paginated subset of tanks
+    my @paginated_tanks = @tanks[$start..$end];
+    my $filtered = scalar @paginated_tanks;
 
     $redis->quit();
-    return ($total, $filtered, @tanks);
+    return ($total, $filtered, @paginated_tanks);
 }
 
 # create_tankoubon(name, existing_id)

@@ -333,11 +333,25 @@
 																data: { name: result.value },
 																success: function (data) {
 																	if (data.success) {
-																		Tankoubon.addArchive(data.tankoubon_id, archiveId);
-																		// Redraw the datatable to reflect changes
-																		if (IndexTable.dataTable.ajax) {
-																			IndexTable.dataTable.ajax.reload();
-																		}
+																		// Add archive to the new tankoubon
+																		$.ajax({
+																			url: `api/tankoubons/${data.tankoubon_id}/archives/${archiveId}`,
+																			type: "PUT",
+																			success: function() {
+																				LRR.toast({
+																					heading: "Success!",
+																					text: "Archive added to new tankoubon",
+																					icon: "success"
+																				});
+																				// Redraw the datatable to reflect changes
+																				if (IndexTable.dataTable.ajax) {
+																					IndexTable.dataTable.ajax.reload();
+																				}
+																			},
+																			error: function(xhr, status, error) {
+																				LRR.showErrorToast("Error adding archive to tankoubon: " + error);
+																			}
+																		});
 																	} else {
 																		LRR.showErrorToast("Error creating tankoubon: " + data.error);
 																	}
@@ -347,7 +361,24 @@
 													});
 												} else {
 													// Add to existing tankoubon
-													Tankoubon.addArchive(result.value, archiveId);
+													$.ajax({
+														url: `api/tankoubons/${result.value}/archives/${archiveId}`,
+														type: "PUT",
+														success: function() {
+															LRR.toast({
+																heading: "Success!",
+																text: "Archive added to tankoubon",
+																icon: "success"
+															});
+															// Redraw the datatable to reflect changes
+															if (IndexTable.dataTable.ajax) {
+																IndexTable.dataTable.ajax.reload();
+															}
+														},
+														error: function(xhr, status, error) {
+															LRR.showErrorToast("Error adding archive to tankoubon: " + error);
+														}
+													});
 												}
 											}
 										});
