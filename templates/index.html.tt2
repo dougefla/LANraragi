@@ -259,7 +259,7 @@
 										Tankoubon.deleteTankoubon(archiveId);
 										break;
 									case "delete_all":
-										Tankoubon.deleteTankoubonAndArchives(archiveId);
+										Tankoubon.deleteTankoubon(archiveId, true);
 										break;
 								}
 							},
@@ -281,7 +281,7 @@
 								$.ajax({
 									url: "api/tankoubons",
 									type: "GET",
-									success: function (tankoubons) {
+									success: function (response) {
 										let options = "";
 										
 										// Add option to create new tankoubon
@@ -289,7 +289,7 @@
 										options += `<option disabled>──────────</option>`;
 										
 										// Add existing tankoubons
-										tankoubons.forEach(tank => 
+										response.result.forEach(tank => 
 											options += `<option value="${tank.id}">${tank.name}</option>`
 										);
 

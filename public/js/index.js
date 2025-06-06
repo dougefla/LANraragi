@@ -1058,8 +1058,8 @@ Index.loadContextMenuTankoubons = function (arcid) {
         url: "api/tankoubons",
         type: "GET",
         async: false,
-        success: function (data) {
-            data.forEach(function (tank) {
+        success: function (response) {
+            response.result.forEach(function (tank) {
                 items[tank.id] = {
                     name: tank.name,
                     icon: "fas fa-book",

@@ -152,8 +152,8 @@ sub extract_series_name {
             return $base_name;
         }
         
-        # Then try to match by removing trailing numbers for Chinese titles
-        if ($title =~ /^(.+?)[0-9０-９一二三四五六七八九十]+$/) {
+        # Then try to match by removing trailing numbers and any text after them
+        if ($title =~ /^(.+?)[0-9０-９一二三四五六七八九十]+(?:\s+.*)?$/) {
             my $base_name = $1;
             $base_name =~ s/\s+$//; # Remove trailing whitespace
             

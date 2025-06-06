@@ -572,10 +572,10 @@ IndexTable.addSelectedToTankoubon = function() {
         "GET",
         null,
         "Error loading tankoubons",
-        function(tankoubons) {
+        function(response) {
             let options = '<option value="new">Create New Tankoubon</option>';
             options += '<option disabled>──────────</option>';
-            tankoubons.forEach(tank => {
+            response.result.forEach(tank => {
                 options += `<option value="${tank.id}">${tank.name}</option>`;
             });
 
@@ -649,36 +649,102 @@ IndexTable.addArchivesToTankoubon = function(tankId) {
         url: `api/archives/${IndexTable.selectedArchives[0]}`,
         type: "GET",
         success: function(firstArchive) {
-            // First update the tankoubon with the first archive's tags
+            // First check if the tankoubon already exists and has a cover
             $.ajax({
                 url: `api/tankoubons/${tankId}`,
-                type: "PUT",
-                contentType: "application/json",
-                data: JSON.stringify({
-                    metadata: {
-                        tags: firstArchive.tags || ""
-                    }
-                }),
-                success: function() {
-                    // Then add all archives
-                    let promises = IndexTable.selectedArchives.map(archiveId => {
-                        return $.ajax({
-                            url: `api/tankoubons/${tankId}/archives/${archiveId}`,
-                            type: "PUT"
-                        });
-                    });
-
-                    // After all archives are added, set the first one as cover
-                    Promise.all(promises).then(() => {
-                        // Set the first archive as cover
+                type: "GET",
+                success: function(tank) {
+                    // First update the tankoubon with the first archive's tags if it doesn't have any
+                    if (!tank.tags) {
                         $.ajax({
                             url: `api/tankoubons/${tankId}`,
                             type: "PUT",
                             contentType: "application/json",
                             data: JSON.stringify({
-                                cover_archive: IndexTable.selectedArchives[0]
+                                metadata: {
+                                    tags: firstArchive.tags || ""
+                                }
                             }),
                             success: function() {
+                                // Then add all archives
+                                let promises = IndexTable.selectedArchives.map(archiveId => {
+                                    return $.ajax({
+                                        url: `api/tankoubons/${tankId}/archives/${archiveId}`,
+                                        type: "PUT"
+                                    });
+                                });
+
+                                // After all archives are added, set the first one as cover only if no cover exists
+                                Promise.all(promises).then(() => {
+                                    if (!tank.cover_archive) {
+                                        // Set the first archive as cover only if no cover exists
+                                        $.ajax({
+                                            url: `api/tankoubons/${tankId}`,
+                                            type: "PUT",
+                                            contentType: "application/json",
+                                            data: JSON.stringify({
+                                                cover_archive: IndexTable.selectedArchives[0]
+                                            }),
+                                            success: function() {
+                                                LRR.toast({
+                                                    heading: "Success!",
+                                                    text: `Added ${IndexTable.selectedArchives.length} archives to tankoubon`,
+                                                    icon: "success"
+                                                });
+                                                IndexTable.toggleSelectionMode();
+                                                IndexTable.dataTable.draw();
+                                            }
+                                        });
+                                    } else {
+                                        // Just show success message if cover already exists
+                                        LRR.toast({
+                                            heading: "Success!",
+                                            text: `Added ${IndexTable.selectedArchives.length} archives to tankoubon`,
+                                            icon: "success"
+                                        });
+                                        IndexTable.toggleSelectionMode();
+                                        IndexTable.dataTable.draw();
+                                    }
+                                }).catch(error => {
+                                    LRR.showErrorToast("Error adding archives to tankoubon: " + error);
+                                });
+                            },
+                            error: function(xhr, status, error) {
+                                LRR.showErrorToast("Error updating tankoubon tags: " + error);
+                            }
+                        });
+                    } else {
+                        // If tankoubon already has tags, just add the archives
+                        let promises = IndexTable.selectedArchives.map(archiveId => {
+                            return $.ajax({
+                                url: `api/tankoubons/${tankId}/archives/${archiveId}`,
+                                type: "PUT"
+                            });
+                        });
+
+                        // After all archives are added, set the first one as cover only if no cover exists
+                        Promise.all(promises).then(() => {
+                            if (!tank.cover_archive) {
+                                // Set the first archive as cover only if no cover exists
+                                $.ajax({
+                                    url: `api/tankoubons/${tankId}`,
+                                    type: "PUT",
+                                    contentType: "application/json",
+                                    data: JSON.stringify({
+                                        cover_archive: IndexTable.selectedArchives[0]
+                                    }),
+                                    success: function() {
+                                        LRR.toast({
+                                            heading: "Success!",
+                                            text: `Added ${IndexTable.selectedArchives.length} archives to tankoubon`,
+                                            icon: "success"
+                                        });
+                                        IndexTable.toggleSelectionMode();
+                                        IndexTable.dataTable.draw();
+                                    }
+                                });
+                            } else {
+                                // Just show success message if cover already exists
                                 LRR.toast({
                                     heading: "Success!",
                                     text: `Added ${IndexTable.selectedArchives.length} archives to tankoubon`,
@@ -687,13 +753,13 @@ IndexTable.addArchivesToTankoubon = function(tankId) {
                                 IndexTable.toggleSelectionMode();
                                 IndexTable.dataTable.draw();
                             }
+                        }).catch(error => {
+                            LRR.showErrorToast("Error adding archives to tankoubon: " + error);
                         });
-                    }).catch(error => {
-                        LRR.showErrorToast("Error adding archives to tankoubon: " + error);
-                    });
+                    }
                 },
                 error: function(xhr, status, error) {
-                    LRR.showErrorToast("Error updating tankoubon tags: " + error);
+                    LRR.showErrorToast("Error getting tankoubon info: " + error);
                 }
             });
         },
