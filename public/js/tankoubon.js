@@ -159,52 +159,55 @@ function renderTankoubonCards() {
         return;
     }
     
-    var html = '<div class="id1" style="text-align: center; margin: 20px auto; max-width: 1200px;">';
+    // Compact list-style layout
+    var html = '<div style="max-width: 800px; margin: 0 auto;">';
     
     tankoubonData.forEach(function(tank) {
         var archiveCount = tank.archives ? tank.archives.length : 0;
         var hasArchives = archiveCount > 0;
         
-        // Using standard LANraragi styling similar to category cards
-        html += '<div class="tag-container" style="margin: 10px; padding: 20px; min-width: 300px; display: inline-block; vertical-align: top;">';
+        // Compact horizontal list item
+        html += '<div class="tankoubon-list-item" style="display: flex; align-items: center; padding: 12px; margin: 8px 0; background: rgba(255,255,255,0.05); border-radius: 6px; border-left: 3px solid #007bff;">';
         
-        // Header with tankoubon icon and name  
-        html += '<div style="text-align: center; margin-bottom: 15px;">';
-        html += '<h3 style="margin: 0; font-size: 18px; font-weight: bold;">📚 ' + LRR.encodeHTML(tank.name) + '</h3>';
-        html += '<div style="color: #888; font-size: 12px; margin: 5px 0;">';
-        html += LRR.encodeHTML(tank.id);
+        // Icon and basic info
+        html += '<div style="flex-shrink: 0; margin-right: 15px;">';
+        html += '<div style="font-size: 24px;">📚</div>';
         html += '</div>';
-        html += '<div style="color: #666; margin: 8px 0;">';
-        html += '<i class="fa fa-books" style="margin-right: 5px;"></i>' + archiveCount + ' archives';
-        html += '</div>';
+        
+        // Main content
+        html += '<div style="flex-grow: 1; min-width: 0;">';
+        html += '<div style="font-weight: bold; font-size: 16px; margin-bottom: 4px; color: #fff;">' + LRR.encodeHTML(tank.name) + '</div>';
+        html += '<div style="font-size: 12px; color: #aaa; margin-bottom: 2px;">ID: ' + LRR.encodeHTML(tank.id) + '</div>';
+        html += '<div style="font-size: 13px; color: #ccc;">';
+        html += '<i class="fa fa-book" style="margin-right: 5px;"></i>' + archiveCount + ' archives';
         if (tank.summary) {
-            html += '<div style="color: #666; font-style: italic; margin: 8px 0; font-size: 13px;">' + LRR.encodeHTML(tank.summary) + '</div>';
+            html += ' • ' + LRR.encodeHTML(tank.summary.substring(0, 80) + (tank.summary.length > 80 ? '...' : ''));
         }
         html += '</div>';
+        html += '</div>';
         
-        // Action buttons with standard LANraragi styling
-        html += '<div style="text-align: center;">';
+        // Action buttons (compact)
+        html += '<div style="flex-shrink: 0; display: flex; gap: 6px;">';
         
         // View button
-        html += '<input type="button" class="stdbtn view-archives-btn" data-tank-id="' + LRR.encodeHTML(tank.id) + '" data-tank-name="' + LRR.encodeHTML(tank.name) + '" ';
-        html += 'value="👁 View (' + archiveCount + ')" style="margin: 2px;" />';
+        html += '<button class="stdbtn view-archives-btn" data-tank-id="' + LRR.encodeHTML(tank.id) + '" data-tank-name="' + LRR.encodeHTML(tank.name) + '" ';
+        html += 'style="padding: 6px 12px; font-size: 12px;" title="View archives">👁 ' + archiveCount + '</button>';
         
         // Management buttons for logged users
         if ($('body').data('user-logged') === "1") {
-            html += '<br>';
-            html += '<input type="button" class="stdbtn add-archives-btn" data-tank-id="' + LRR.encodeHTML(tank.id) + '" data-tank-name="' + LRR.encodeHTML(tank.name) + '" ';
-            html += 'value="➕ Add Archives" style="margin: 2px;" />';
+            html += '<button class="stdbtn add-archives-btn" data-tank-id="' + LRR.encodeHTML(tank.id) + '" data-tank-name="' + LRR.encodeHTML(tank.name) + '" ';
+            html += 'style="padding: 6px 10px; font-size: 12px;" title="Add archives">➕</button>';
             
             if (hasArchives) {
-                html += '<input type="button" class="stdbtn manage-archives-btn" data-tank-id="' + LRR.encodeHTML(tank.id) + '" data-tank-name="' + LRR.encodeHTML(tank.name) + '" ';
-                html += 'value="📋 Manage" style="margin: 2px;" />';
+                html += '<button class="stdbtn manage-archives-btn" data-tank-id="' + LRR.encodeHTML(tank.id) + '" data-tank-name="' + LRR.encodeHTML(tank.name) + '" ';
+                html += 'style="padding: 6px 10px; font-size: 12px;" title="Manage archives">📋</button>';
             }
-            html += '<br>';
-            html += '<input type="button" class="stdbtn edit-tankoubon-btn" data-tank-id="' + LRR.encodeHTML(tank.id) + '" data-tank-name="' + LRR.encodeHTML(tank.name) + '" ';
-            html += 'value="✏ Edit" style="margin: 2px;" />';
             
-            html += '<input type="button" class="stdbtn delete-tankoubon-btn" data-tank-id="' + LRR.encodeHTML(tank.id) + '" data-tank-name="' + LRR.encodeHTML(tank.name) + '" ';
-            html += 'value="🗑 Delete" style="margin: 2px; background-color: #d32f2f; color: white;" />';
+            html += '<button class="stdbtn edit-tankoubon-btn" data-tank-id="' + LRR.encodeHTML(tank.id) + '" data-tank-name="' + LRR.encodeHTML(tank.name) + '" ';
+            html += 'style="padding: 6px 10px; font-size: 12px;" title="Edit tankoubon">✏</button>';
+            
+            html += '<button class="stdbtn delete-tankoubon-btn" data-tank-id="' + LRR.encodeHTML(tank.id) + '" data-tank-name="' + LRR.encodeHTML(tank.name) + '" ';
+            html += 'style="padding: 6px 10px; font-size: 12px; background-color: #d32f2f; color: white;" title="Delete tankoubon">🗑</button>';
         }
         
         html += '</div>';
@@ -229,43 +232,37 @@ function renderTankoubonThumbnails() {
     
     tankoubonData.forEach(function(tank) {
         var archiveCount = tank.archives ? tank.archives.length : 0;
-        var thumbnailUrl = '/api/archives/' + (tank.archives && tank.archives[0] ? tank.archives[0] : 'default') + '/thumbnail';
         
-        // Create a fake archive object for buildThumbnailDiv
-        var fakeArchive = {
-            arcid: tank.id,
-            id: tank.id,
-            title: tank.name + ' (' + archiveCount + ' archives)',
-            tags: tank.tags || '',
-            pagecount: archiveCount
-        };
-        
-        var thumbnailHtml = LRR.buildThumbnailDiv(fakeArchive, false);
-        
-        // Replace the thumbnail source to use tankoubon thumbnail or placeholder
+        // Determine thumbnail source
+        var thumbnailUrl;
         if (tank.archives && tank.archives.length > 0) {
-            thumbnailHtml = thumbnailHtml.replace(
-                /src="[^"]*\/api\/archives\/[^"]*\/thumbnail"/,
-                'src="' + thumbnailUrl + '"'
-            );
+            thumbnailUrl = '/api/archives/' + tank.archives[0] + '/thumbnail';
         } else {
-            // Use placeholder for empty tankoubons
-            thumbnailHtml = thumbnailHtml.replace(
-                /src="[^"]*\/api\/archives\/[^"]*\/thumbnail"/,
-                'src="/img/noThumb.png"'
-            );
+            thumbnailUrl = '/img/noThumb.png';
         }
         
-        // Replace the reader link with tankoubon view link
-        thumbnailHtml = thumbnailHtml.replace(
-            /href="[^"]*\/reader\?id=[^"]*"/g,
-            'href="#" onclick="showArchives(\'' + LRR.encodeHTML(tank.id) + '\', \'' + LRR.encodeHTML(tank.name) + '\'); return false;"'
-        );
+        // Create compact thumbnail HTML without any title or text
+        var thumbnailHtml = '<div class="compact-thumb" data-tank-id="' + LRR.encodeHTML(tank.id) + '" data-tank-name="' + LRR.encodeHTML(tank.name) + '" style="position: relative; cursor: pointer; overflow: hidden;">';
+        thumbnailHtml += '<img src="' + thumbnailUrl + '" onerror="this.src=\'/img/noThumb.png\';" />';
+        
+        // Small overlay with archive count only
+        if (archiveCount > 0) {
+            thumbnailHtml += '<div style="position: absolute; top: 2px; right: 2px; background: rgba(0,0,0,0.7); color: white; padding: 1px 4px; font-size: 10px; border-radius: 2px; font-weight: bold;">' + archiveCount + '</div>';
+        }
+        
+        thumbnailHtml += '</div>';
         
         container.append(thumbnailHtml);
     });
     
-    // Attach event handlers after thumbnails are added
+    // Attach click handlers
+    $('#thumbs_container .compact-thumb').on('click', function() {
+        var tankId = $(this).data('tank-id');
+        var tankName = $(this).data('tank-name');
+        showArchives(tankId, tankName);
+    });
+    
+    // Add right-click context menu
     attachThumbnailEventHandlers();
 }
 
@@ -302,14 +299,15 @@ function attachEventHandlers() {
 }
 
 function attachThumbnailEventHandlers() {
-    // Add right-click context menu for tankoubon management
-    $('#thumbs_container .id1').each(function() {
-        var tankId = $(this).attr('id');
+    // Add right-click context menu for compact tankoubon thumbnails
+    $('#thumbs_container .compact-thumb').each(function() {
+        var $thumb = $(this);
+        var tankId = $thumb.data('tank-id');
         var tank = tankoubonData.find(t => t.id === tankId);
         if (!tank) return;
         
         // Add context menu functionality
-        $(this).contextmenu(function(e) {
+        $thumb.contextmenu(function(e) {
             e.preventDefault();
             
             var actions = [
@@ -340,12 +338,18 @@ function attachThumbnailEventHandlers() {
                 );
             }
             
-            // Create context menu (using simple approach)
-            var menu = $('<div class="context-menu" style="position: absolute; background: white; border: 1px solid #ccc; padding: 5px; z-index: 1000; box-shadow: 2px 2px 5px rgba(0,0,0,0.3);"></div>');
+            // Create context menu
+            var menu = $('<div class="context-menu" style="position: fixed; background: white; border: 1px solid #ccc; padding: 8px 0; z-index: 1000; box-shadow: 3px 3px 10px rgba(0,0,0,0.3); border-radius: 4px; min-width: 180px;"></div>');
             
-            actions.forEach(function(action) {
-                var item = $('<div style="padding: 5px 10px; cursor: pointer; border-bottom: 1px solid #eee;">' + action.text + '</div>');
-                item.click(action.onclick);
+            actions.forEach(function(action, index) {
+                if (index > 0) {
+                    menu.append('<div style="height: 1px; background: #eee; margin: 3px 0;"></div>');
+                }
+                var item = $('<div style="padding: 8px 15px; cursor: pointer; font-size: 13px;">' + action.text + '</div>');
+                item.click(function() {
+                    action.onclick();
+                    menu.remove();
+                });
                 item.hover(
                     function() { $(this).css('background-color', '#f0f0f0'); },
                     function() { $(this).css('background-color', 'white'); }
@@ -354,8 +358,8 @@ function attachThumbnailEventHandlers() {
             });
             
             menu.css({
-                left: e.pageX + 'px',
-                top: e.pageY + 'px'
+                left: Math.min(e.pageX, $(window).width() - 200) + 'px',
+                top: Math.min(e.pageY, $(window).height() - menu.height() - 50) + 'px'
             });
             
             $('body').append(menu);
@@ -364,6 +368,8 @@ function attachThumbnailEventHandlers() {
             $(document).one('click', function() {
                 menu.remove();
             });
+            
+            return false;
         });
     });
 }

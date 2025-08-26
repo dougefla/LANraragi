@@ -56,16 +56,93 @@
 			border-radius: 2px;
 		}
 		
+		/* Compact thumbnail grid styles */
 		#thumbs_container {
-			display: flex;
-			flex-wrap: wrap;
-			gap: 10px;
-			justify-content: center;
-			margin: 20px 0;
+			display: grid;
+			grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+			grid-gap: 0;
+			padding: 0;
+			margin: 0;
+			background-color: transparent;
 		}
 		
-		#thumbs_container .id1 {
-			margin: 5px;
+		#thumbs_container .compact-thumb {
+			background: white;
+			border-radius: 0;
+			overflow: hidden;
+			transition: transform 0.2s ease, box-shadow 0.2s ease;
+		}
+		
+		#thumbs_container .compact-thumb:hover {
+			transform: scale(1.02);
+			box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+			z-index: 10;
+			position: relative;
+		}
+		
+		#thumbs_container .compact-thumb img {
+			width: 100%;
+			height: 140px;
+			display: block;
+			object-fit: cover;
+		}
+		
+		/* Remove default thumbnail styles that might interfere */
+		#thumbs_container .thumb {
+			margin: 0 !important;
+			padding: 0 !important;
+		}
+		#thumbs_container .caption {
+			display: none !important;
+		}
+		#thumbs_container .id3 {
+			margin: 0 !important;
+			padding: 0 !important;
+			gap: 0 !important;
+		}
+		
+		/* Pagination styles similar to LANraragi reader */
+		.paginator {
+			background: rgba(0, 0, 0, 0.8);
+			border-radius: 8px;
+			padding: 10px 20px;
+			display: inline-block;
+			margin: 0 auto;
+		}
+		.paginator .page-link {
+			color: #fff;
+			text-decoration: none;
+			margin: 0 5px;
+			transition: color 0.2s ease;
+		}
+		.paginator .page-link:hover:not([style*="cursor: not-allowed"]) {
+			color: #007bff;
+		}
+		.paginator .pagecount {
+			color: #fff;
+			font-weight: bold;
+			margin: 0 15px;
+		}
+		.paginator .current-page {
+			color: #007bff;
+		}
+		
+		/* List view styling */
+		.tankoubon-list-item:hover {
+			background: rgba(255,255,255,0.08) !important;
+			transform: translateX(3px);
+			transition: all 0.2s ease;
+		}
+		
+		.tankoubon-list-item .stdbtn {
+			border: none;
+			background: rgba(255,255,255,0.1);
+			transition: all 0.2s ease;
+		}
+		
+		.tankoubon-list-item .stdbtn:hover {
+			background: rgba(255,255,255,0.2);
+			transform: scale(1.05);
 		}
 	</style>
 
