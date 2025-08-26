@@ -16,16 +16,19 @@ use LANraragi::Utils::Generic  qw(array_difference filter_hash_by_keys);
 use LANraragi::Utils::Logging  qw(get_logger);
 use LANraragi::Utils::Redis    qw(redis_decode redis_encode);
 
-my %TANK_METADATA = ( "name", 0, "summary", -1, "tags", -2 );
+my %TANK_METADATA = ( "name", 0, "summary", -1, "tags", -2, "thumbnail", -3 );
 
-# get_tankoubon_list(page)
+# get_tankoubon_list(page, pagesize, sort, order)
 #   Returns a list of all the Tankoubon objects.
-sub get_tankoubon_list ( $page = 0 ) {
+sub get_tankoubon_list ( $page = 0, $pagesize = 0, $sort = 'name', $order = 'asc' ) {
 
     my $redis  = LANraragi::Model::Config->get_redis;
     my $logger = get_logger( "Tankoubon", "lanraragi" );
 
     $page //= 0;
+    $pagesize //= 0;
+    $sort //= 'name';
+    $order //= 'asc';
 
     # Tankoubons are represented by TANK_[timestamp] in DB. Can't wait for 2038!
     my @tanks = $redis->keys('TANK_??????????');
@@ -37,21 +40,58 @@ sub get_tankoubon_list ( $page = 0 ) {
         push( @result, \%data );
     }
 
-    # # Only get the first X keys
-    my $keysperpage = LANraragi::Model::Config->get_pagesize;
+    # Sort the results based on the specified criteria
+    if ($sort eq 'name') {
+        if ($order eq 'desc') {
+            @result = sort { lc($b->{name}) cmp lc($a->{name}) } @result;
+        } else {
+            @result = sort { lc($a->{name}) cmp lc($b->{name}) } @result;
+        }
+    } elsif ($sort eq 'created') {
+        if ($order eq 'desc') {
+            @result = sort { $b->{id} cmp $a->{id} } @result;  # ID contains timestamp
+        } else {
+            @result = sort { $a->{id} cmp $b->{id} } @result;
+        }
+    } elsif ($sort eq 'archives') {
+        if ($order eq 'desc') {
+            @result = sort { 
+                my $a_count = $a->{archives} ? scalar(@{$a->{archives}}) : 0;
+                my $b_count = $b->{archives} ? scalar(@{$b->{archives}}) : 0;
+                $b_count <=> $a_count;
+            } @result;
+        } else {
+            @result = sort { 
+                my $a_count = $a->{archives} ? scalar(@{$a->{archives}}) : 0;
+                my $b_count = $b->{archives} ? scalar(@{$b->{archives}}) : 0;
+                $a_count <=> $b_count;
+            } @result;
+        }
+    }
+
+    # Handle pagination
+    my $total = scalar(@result);
+    
+    # If pagesize is 0 or negative, use default from config
+    if ($pagesize <= 0) {
+        $pagesize = LANraragi::Model::Config->get_pagesize;
+    }
 
     # Return total keys and the filtered ones
-    my $total = $#tanks + 1;
-    my $start = $page * $keysperpage;
-    my $end   = min( $start + $keysperpage - 1, $#result );
+    my $start = $page * $pagesize;
+    my $end   = min( $start + $pagesize - 1, $#result );
+    
+    # Ensure we don't go out of bounds
+    $end = $#result if $end > $#result;
 
     if ( $page < 0 ) {
         return ( $total, $total, @result );
     } else {
-        return ( $total, $#result + 1, @result[ $start .. $end ] );
+        # Calculate actual filtered count (how many we're returning)
+        my $filtered_count = ($end >= $start && $start <= $#result) ? $end - $start + 1 : 0;
+        my @page_result = ($start <= $#result) ? @result[ $start .. $end ] : ();
+        return ( $total, $filtered_count, @page_result );
     }
-
-    #return @result;
 }
 
 # create_tankoubon(name, existing_id)
@@ -97,9 +137,10 @@ sub create_tankoubon ( $name, $tank_id ) {
     $redis_search->zadd( "LRR_TITLES", 0, "$tank_title\0$tank_id" );
 
     # Init metadata
-    $redis->zadd( $tank_id, $TANK_METADATA{"name"},    redis_encode("name_${tank_title}") );
-    $redis->zadd( $tank_id, $TANK_METADATA{"summary"}, "summary_" );
-    $redis->zadd( $tank_id, $TANK_METADATA{"tags"},    "tags_" );
+    $redis->zadd( $tank_id, $TANK_METADATA{"name"},      redis_encode("name_${tank_title}") );
+    $redis->zadd( $tank_id, $TANK_METADATA{"summary"},   "summary_" );
+    $redis->zadd( $tank_id, $TANK_METADATA{"tags"},      "tags_" );
+    $redis->zadd( $tank_id, $TANK_METADATA{"thumbnail"}, "thumbnail_" );
 
     $redis->quit;
     $redis_search->quit;
@@ -130,7 +171,7 @@ sub get_tankoubon ( $tank_id, $fulldata = 0, $page = 0 ) {
     }
 
     # Declare some needed variables
-    my @allowed_keys = ( 'name', 'summary', 'tags', 'archives', 'full_data', 'id' );
+    my @allowed_keys = ( 'name', 'summary', 'tags', 'thumbnail', 'archives', 'full_data', 'id' );
     my @archives;
     my @limit = split( ' ', "LIMIT " . ( $keysperpage * $page ) . " $keysperpage" );
     my %tank  = fetch_metadata_fields($tank_id);

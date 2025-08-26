@@ -5,6 +5,7 @@ use Redis;
 use Encode;
 
 use LANraragi::Model::Tankoubon;
+use LANraragi::Model::Archive;
 use LANraragi::Utils::Generic qw(render_api_response exec_with_lock);
 
 sub get_tankoubon_list {
@@ -12,9 +13,22 @@ sub get_tankoubon_list {
     my $self = shift;
     my $req  = $self->req;
 
-    my $page = $req->param('page');
+    my $page = $req->param('page') || 1;  # Default to page 1
+    my $pagesize = $req->param('pagesize') || 0;
+    my $sort = $req->param('sort') || 'name';
+    my $order = $req->param('order') || 'asc';
+    
+    # Validate parameters
+    $page = int($page) if $page;
+    $page = 1 if $page < 1;  # Ensure page is at least 1
+    $pagesize = int($pagesize) if $pagesize;
+    $sort = 'name' unless $sort =~ /^(name|created|archives)$/;
+    $order = 'asc' unless $order =~ /^(asc|desc)$/;
+    
+    # Convert to 0-based page number for the model
+    my $zero_based_page = $page - 1;
 
-    my ( $total, $filtered, @rgs ) = LANraragi::Model::Tankoubon::get_tankoubon_list($page);
+    my ( $total, $filtered, @rgs ) = LANraragi::Model::Tankoubon::get_tankoubon_list($zero_based_page, $pagesize, $sort, $order);
     $self->render( json => { result => \@rgs, total => $total, filtered => $filtered } );
 
 }
@@ -96,6 +110,43 @@ sub update_tankoubon {
             render_api_response( $self, "update_tankoubon", undef, $successMessage );
         } else {
             render_api_response( $self, "update_tankoubon", $err );
+        }
+    });
+}
+
+sub set_tankoubon_thumbnail {
+
+    my $self     = shift;
+    my $tankid   = $self->stash('id');
+    my $archiveid = $self->req->json->{archive_id};
+
+    if (!$archiveid) {
+        render_api_response( $self, "set_tankoubon_thumbnail", "No archive ID provided." );
+        return;
+    }
+
+    my $redis = LANraragi::Model::Config->get_redis;
+
+    return unless exec_with_lock( $self, $redis, "tankoubon-write:$tankid", "set_tankoubon_thumbnail", $tankid, sub {
+        
+        # Check if the archive exists in the tankoubon
+        my $score = $redis->zscore($tankid, $archiveid);
+        if (!defined $score || $score < 1) {
+            render_api_response( $self, "set_tankoubon_thumbnail", "Archive is not part of this tankoubon." );
+            return;
+        }
+
+        # Update the thumbnail field
+        my $result = LANraragi::Model::Tankoubon::update_metadata_field($tankid, "thumbnail", $archiveid);
+
+        if ($result) {
+            my %tankoubon      = LANraragi::Model::Tankoubon::get_tankoubon($tankid);
+            my $title          = LANraragi::Model::Archive::get_title($archiveid);
+            my $successMessage = "Set thumbnail for tankoubon \"$tankoubon{name}\" to \"$title\"!";
+
+            render_api_response( $self, "set_tankoubon_thumbnail", undef, $successMessage );
+        } else {
+            render_api_response( $self, "set_tankoubon_thumbnail", "Failed to set thumbnail." );
         }
     });
 }

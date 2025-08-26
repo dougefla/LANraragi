@@ -179,6 +179,7 @@ sub apply_routes {
     $public_api->get('/api/tankoubons/:id')->to('api-tankoubon#get_tankoubon');
     $logged_in_api->put('/api/tankoubons')->to('api-tankoubon#create_tankoubon');
     $logged_in_api->put('/api/tankoubons/:id')->to('api-tankoubon#update_tankoubon');
+    $logged_in_api->post('/api/tankoubons/:id/thumbnail')->to('api-tankoubon#set_tankoubon_thumbnail');
     $logged_in_api->delete('/api/tankoubons/:id')->to('api-tankoubon#delete_tankoubon');
     $logged_in_api->put('/api/tankoubons/:id/:archive')->to('api-tankoubon#add_to_tankoubon');
     $logged_in_api->delete('/api/tankoubons/:id/:archive')->to('api-tankoubon#remove_from_tankoubon');

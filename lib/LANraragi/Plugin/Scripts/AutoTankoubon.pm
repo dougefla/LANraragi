@@ -81,7 +81,7 @@ sub run_script {
             $logger->info("DRY RUN: Would remove all existing tankoubons");
         } else {
             $logger->info("Removing all existing tankoubons...");
-            my ($total, $filtered, @tankoubon_list) = LANraragi::Model::Tankoubon::get_tankoubon_list(-1);  # Get all tankoubons
+            my ($total, $filtered, @tankoubon_list) = LANraragi::Model::Tankoubon::get_tankoubon_list(-1, 0, 'name', 'asc');  # Get all tankoubons
             my $removed_count = 0;
             for my $tank (@tankoubon_list) {
                 if (LANraragi::Model::Tankoubon::delete_tankoubon($tank->{id})) {
@@ -106,7 +106,7 @@ sub run_script {
     # Get existing tankoubons if skip_existing is enabled
     my %existing_tankoubon_archives;
     if ($skip_existing) {
-        my ($total, $filtered, @tankoubon_list) = LANraragi::Model::Tankoubon::get_tankoubon_list();
+        my ($total, $filtered, @tankoubon_list) = LANraragi::Model::Tankoubon::get_tankoubon_list(0, 0, 'name', 'asc');
         for my $tank (@tankoubon_list) {
             my %tank_data = LANraragi::Model::Tankoubon::get_tankoubon($tank->{id});
             if (%tank_data && $tank_data{archives}) {
@@ -345,6 +345,11 @@ sub extract_title_series_with_index {
         $tankoubon_title =~ s/^\s+|\s+$//g;
         $tankoubon_title =~ s/\s+/ /g;
         
+        # Extract only the first word for tankoubon name (no spaces allowed)
+        if ($tankoubon_title =~ /^(\S+)/) {
+            $tankoubon_title = $1;
+        }
+        
         # Tankoubon title cannot be empty and should be at least 2 characters
         if (length($tankoubon_title) >= 2) {
             return ($tankoubon_title, $index);
@@ -392,6 +397,11 @@ sub extract_title_series {
         $tankoubon_title =~ s/^\s+|\s+$//g;
         $tankoubon_title =~ s/\s+/ /g;
         
+        # Extract only the first word for tankoubon name (no spaces allowed)
+        if ($tankoubon_title =~ /^(\S+)/) {
+            $tankoubon_title = $1;
+        }
+        
         # Tankoubon title cannot be empty and should be at least 2 characters
         if (length($tankoubon_title) >= 2) {
             return $tankoubon_title;
@@ -406,6 +416,11 @@ sub extract_title_series {
     # Clean up whitespace
     $clean_title =~ s/^\s+|\s+$//g;
     $clean_title =~ s/\s+/ /g;
+    
+    # Extract only the first word for tankoubon name (no spaces allowed)
+    if ($clean_title =~ /^(\S+)/) {
+        $clean_title = $1;
+    }
     
     # Only return if we have a meaningful series name (at least 2 characters)
     return (length($clean_title) >= 2) ? $clean_title : "";

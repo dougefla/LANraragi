@@ -7,6 +7,8 @@ var tankoubonData = [];
 var currentPage = 1;
 var totalTankoubons = 0;
 var tankoubonsPerPage = 100; // Default page size
+var sortBy = 'name';
+var sortOrder = 'asc';
 
 // Mock Index object for compatibility with LRR.buildProgressDiv
 var Index = {
@@ -23,7 +25,19 @@ $(document).ready(function() {
     // Initialize thumbnail view mode
     if (localStorage.tankoubon_viewMode === undefined) localStorage.tankoubon_viewMode = "0"; // 0 = list, 1 = thumbnails
     
-    console.log("Initial view mode:", localStorage.tankoubon_viewMode);
+    // Initialize sorting and pagination settings
+    if (localStorage.tankoubon_sortBy) sortBy = localStorage.tankoubon_sortBy;
+    if (localStorage.tankoubon_sortOrder) sortOrder = localStorage.tankoubon_sortOrder;
+    if (localStorage.tankoubon_itemsPerPage) {
+        tankoubonsPerPage = localStorage.tankoubon_itemsPerPage === 'all' ? -1 : parseInt(localStorage.tankoubon_itemsPerPage);
+    }
+    
+    // Set initial control values
+    $("#sort-by").val(sortBy);
+    $("#sort-order").val(sortOrder);
+    $("#items-per-page").val(localStorage.tankoubon_itemsPerPage || "100");
+    
+    console.log("Initial settings - view mode:", localStorage.tankoubon_viewMode, "sort:", sortBy, sortOrder, "per page:", tankoubonsPerPage);
     
     loadTankoubons();
     setupEventHandlers();
@@ -50,6 +64,35 @@ function setupEventHandlers() {
         return false;
     });
     
+    // Sorting controls
+    $("#sort-by").change(function() {
+        sortBy = $(this).val();
+        localStorage.tankoubon_sortBy = sortBy;
+        currentPage = 1; // Reset to first page
+        loadTankoubons(currentPage);
+    });
+    
+    $("#sort-order").change(function() {
+        sortOrder = $(this).val();
+        localStorage.tankoubon_sortOrder = sortOrder;
+        currentPage = 1; // Reset to first page
+        loadTankoubons(currentPage);
+    });
+    
+    // Items per page control
+    $("#items-per-page").change(function() {
+        var selectedValue = $(this).val();
+        localStorage.tankoubon_itemsPerPage = selectedValue;
+        tankoubonsPerPage = selectedValue === 'all' ? -1 : parseInt(selectedValue);
+        currentPage = 1; // Reset to first page
+        loadTankoubons(currentPage);
+    });
+    
+    // Refresh button
+    $("#refresh-btn").click(function() {
+        loadTankoubons(currentPage);
+    });
+    
     // Pagination controls
     $(document).on('click', '.page-link', function(e) {
         e.preventDefault();
@@ -62,7 +105,7 @@ function setupEventHandlers() {
         }
         
         var targetPage = currentPage;
-        var totalPages = Math.ceil(totalTankoubons / tankoubonsPerPage);
+        var totalPages = Math.ceil(totalTankoubons / (tankoubonsPerPage === -1 ? totalTankoubons : tankoubonsPerPage));
         
         switch(action) {
             case 'outer-left':
@@ -93,11 +136,25 @@ function loadTankoubons(page = 1) {
     
     currentPage = page;
     
-    // Fetch tankoubon list from API with pagination
+    // Build API URL with pagination and sorting parameters
     var apiUrl = '/api/tankoubons';
-    if (page > 1) {
-        apiUrl += '?page=' + page;
+    var params = [];
+    
+    // Add pagination if not showing all
+    if (tankoubonsPerPage !== -1) {
+        params.push('page=' + page);
+        params.push('pagesize=' + tankoubonsPerPage);
     }
+    
+    // Add sorting parameters
+    params.push('sort=' + sortBy);
+    params.push('order=' + sortOrder);
+    
+    if (params.length > 0) {
+        apiUrl += '?' + params.join('&');
+    }
+    
+    console.log("API URL:", apiUrl);
     
     $.get(apiUrl)
         .done(function(data) {
@@ -105,15 +162,24 @@ function loadTankoubons(page = 1) {
             if (data.result) {
                 tankoubonData = data.result;
                 totalTankoubons = data.total || tankoubonData.length;
-                console.log("Loaded", tankoubonData.length, "tankoubons (page", page, "of", Math.ceil(totalTankoubons / tankoubonsPerPage), ")");
+                
+                // Update the page display info
+                var displayPerPage = tankoubonsPerPage === -1 ? totalTankoubons : tankoubonsPerPage;
+                var totalPages = Math.ceil(totalTankoubons / displayPerPage);
+                console.log("Loaded", tankoubonData.length, "tankoubons (page", page, "of", totalPages, ") - Total:", totalTankoubons);
+                
                 renderTankoubonList();
                 renderPagination();
+                
+                // Update status info
+                updateStatusInfo();
             } else {
                 showError('Failed to load tankoubons');
             }
         })
-        .fail(function() {
-            showError('Failed to connect to server');
+        .fail(function(xhr, status, error) {
+            console.error("Failed to load tankoubons:", status, error);
+            showError('Failed to connect to server: ' + error);
         })
         .always(function() {
             $('#loading-spinner').hide();
@@ -148,6 +214,22 @@ function renderTankoubonList() {
         console.log("Rendering cards");
         renderTankoubonCards();
     }
+}
+
+function updateStatusInfo() {
+    // Create or update status info display
+    var statusHtml = '<div style="text-align: center; margin: 10px; color: #888; font-size: 13px;">';
+    statusHtml += 'Showing ' + tankoubonData.length + ' of ' + totalTankoubons + ' tankoubons';
+    if (tankoubonsPerPage !== -1) {
+        var totalPages = Math.ceil(totalTankoubons / tankoubonsPerPage);
+        statusHtml += ' (Page ' + currentPage + ' of ' + totalPages + ')';
+    }
+    statusHtml += ' • Sorted by ' + sortBy + ' (' + sortOrder + ')';
+    statusHtml += '</div>';
+    
+    // Remove existing status and add new one
+    $('.tankoubon-status').remove();
+    $('#tankoubon-list').after('<div class="tankoubon-status">' + statusHtml + '</div>');
 }
 
 function renderTankoubonCards() {
@@ -230,30 +312,58 @@ function renderTankoubonThumbnails() {
         return;
     }
     
-    tankoubonData.forEach(function(tank) {
+    tankoubonData.forEach(function(tank, index) {
         var archiveCount = tank.archives ? tank.archives.length : 0;
         
         // Determine thumbnail source
         var thumbnailUrl;
-        if (tank.archives && tank.archives.length > 0) {
+        if (tank.thumbnail && tank.thumbnail !== '') {
+            // Use custom selected thumbnail
+            thumbnailUrl = '/api/archives/' + tank.thumbnail + '/thumbnail';
+        } else if (tank.archives && tank.archives.length > 0) {
+            // Fallback to first archive
             thumbnailUrl = '/api/archives/' + tank.archives[0] + '/thumbnail';
         } else {
             thumbnailUrl = '/img/noThumb.png';
         }
         
-        // Create compact thumbnail HTML without any title or text
+        // Create compact thumbnail HTML with lazy loading
         var thumbnailHtml = '<div class="compact-thumb" data-tank-id="' + LRR.encodeHTML(tank.id) + '" data-tank-name="' + LRR.encodeHTML(tank.name) + '" style="position: relative; cursor: pointer; overflow: hidden;">';
-        thumbnailHtml += '<img src="' + thumbnailUrl + '" onerror="this.src=\'/img/noThumb.png\';" />';
+        
+        // Use lazy loading for thumbnails beyond the first row (12 items)
+        if (index < 12) {
+            // Load immediately for first row
+            thumbnailHtml += '<img src="' + thumbnailUrl + '" onerror="this.src=\'/img/noThumb.png\';" />';
+        } else {
+            // Lazy load for subsequent images
+            thumbnailHtml += '<img data-src="' + thumbnailUrl + '" src="/img/noThumb.png" class="lazy-thumbnail" onerror="this.src=\'/img/noThumb.png\';" />';
+        }
         
         // Small overlay with archive count only
         if (archiveCount > 0) {
             thumbnailHtml += '<div style="position: absolute; top: 2px; right: 2px; background: rgba(0,0,0,0.7); color: white; padding: 1px 4px; font-size: 10px; border-radius: 2px; font-weight: bold;">' + archiveCount + '</div>';
         }
         
+        // Add tankoubon name on hover for identification
+        thumbnailHtml += '<div class="thumb-title" style="position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.8); color: white; padding: 4px; font-size: 11px; text-align: center; transform: translateY(100%); transition: transform 0.2s ease; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">' + LRR.encodeHTML(tank.name) + '</div>';
+        
         thumbnailHtml += '</div>';
         
         container.append(thumbnailHtml);
     });
+    
+    // Initialize lazy loading
+    initializeLazyLoading();
+    
+    // Add hover effects for title display
+    $('#thumbs_container .compact-thumb').hover(
+        function() {
+            $(this).find('.thumb-title').css('transform', 'translateY(0)');
+        },
+        function() {
+            $(this).find('.thumb-title').css('transform', 'translateY(100%)');
+        }
+    );
     
     // Attach click handlers
     $('#thumbs_container .compact-thumb').on('click', function() {
@@ -264,6 +374,53 @@ function renderTankoubonThumbnails() {
     
     // Add right-click context menu
     attachThumbnailEventHandlers();
+}
+
+function initializeLazyLoading() {
+    // Simple lazy loading implementation
+    var lazyImages = document.querySelectorAll('.lazy-thumbnail');
+    
+    if ('IntersectionObserver' in window) {
+        // Modern browsers with IntersectionObserver
+        var imageObserver = new IntersectionObserver(function(entries, observer) {
+            entries.forEach(function(entry) {
+                if (entry.isIntersecting) {
+                    var image = entry.target;
+                    var dataSrc = image.getAttribute('data-src');
+                    if (dataSrc) {
+                        // Add loading indicator
+                        image.style.filter = 'blur(2px)';
+                        
+                        // Load the image
+                        image.src = dataSrc;
+                        image.onload = function() {
+                            image.style.filter = 'none';
+                            image.classList.remove('lazy-thumbnail');
+                        };
+                        image.removeAttribute('data-src');
+                        imageObserver.unobserve(image);
+                    }
+                }
+            });
+        }, {
+            threshold: 0.1,
+            rootMargin: '50px'
+        });
+        
+        lazyImages.forEach(function(image) {
+            imageObserver.observe(image);
+        });
+    } else {
+        // Fallback for older browsers
+        lazyImages.forEach(function(image) {
+            var dataSrc = image.getAttribute('data-src');
+            if (dataSrc) {
+                image.src = dataSrc;
+                image.removeAttribute('data-src');
+                image.classList.remove('lazy-thumbnail');
+            }
+        });
+    }
 }
 
 function attachEventHandlers() {
@@ -443,7 +600,7 @@ function createTankoubon(name, summary, tags, customId) {
 
 function showEditTankoubon(tankId, currentName) {
     // Load current tankoubon data first
-    $.get('/api/tankoubons/' + tankId)
+    $.get('/api/tankoubons/' + tankId + '?include_full_data=1')
         .done(function(data) {
             if (data.result) {
                 var tank = data.result;
@@ -458,12 +615,16 @@ function showEditTankoubon(tankId, currentName) {
                     showCancelButton: true,
                     confirmButtonText: 'Update',
                     cancelButtonText: 'Cancel',
-                    width: 600,
+                    width: 700,
                     didOpen: function() {
                         $('.swal2-container #edit-tankoubon-name').val(tank.name || '');
                         $('.swal2-container #edit-tankoubon-summary').val(tank.summary || '');
                         $('.swal2-container #edit-tankoubon-tags').val(tank.tags || '');
                         $('.swal2-container #edit-tankoubon-id').val(tankId);
+                        
+                        // Load thumbnail selection
+                        loadThumbnailSelection(tankId, tank.thumbnail || '', tank.full_data || []);
+                        
                         $('.swal2-container input[type="text"]').first().focus();
                     }
                 }).then((result) => {
@@ -518,6 +679,94 @@ function updateTankoubon(tankId, newName, newSummary, newTags) {
     .fail(function(xhr) {
         showError('Failed to update tankoubon: ' + (xhr.responseJSON ? xhr.responseJSON.error : 'Network error'));
     });
+}
+
+function loadThumbnailSelection(tankId, currentThumbnail, archives) {
+    var container = $('.swal2-container #thumbnail-selection');
+    
+    if (archives && archives.length > 0) {
+        var html = '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 6px;">';
+        
+        archives.forEach(function(archive) {
+            var isSelected = currentThumbnail === archive.arcid;
+            var selectedClass = isSelected ? ' selected' : '';
+            
+            html += '<div class="thumbnail-option' + selectedClass + '" data-archive-id="' + LRR.encodeHTML(archive.arcid) + '" ';
+            html += 'style="border: 2px solid ' + (isSelected ? '#007bff' : '#ddd') + '; ';
+            html += 'cursor: pointer; text-align: center; padding: 8px; border-radius: 4px; background: white; height: 180px; display: flex; flex-direction: column; overflow: hidden;">';
+            html += '<img src="/api/archives/' + LRR.encodeHTML(archive.arcid) + '/thumbnail" ';
+            html += 'style="width: 100%; height: 120px; object-fit: cover; border-radius: 3px; flex: none;" ';
+            html += 'alt="' + LRR.encodeHTML(archive.title) + '" />';
+            html += '<div style="font-size: 11px; margin-top: 5px; word-wrap: break-word; flex: 1; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;">';
+            html += LRR.encodeHTML(archive.title.length > 30 ? archive.title.substring(0, 30) + '...' : archive.title);
+            html += '</div>';
+            html += '</div>';
+        });
+        
+        html += '</div>';
+        container.html(html);
+        
+        // Add click handlers
+        container.find('.thumbnail-option').on('click', function() {
+            var archiveId = $(this).data('archive-id');
+            selectThumbnail(tankId, archiveId, $(this));
+        });
+    } else {
+        container.html('<div style="text-align: center; padding: 20px; color: #666;">No archives found in this tankoubon.</div>');
+    }
+}
+
+function selectThumbnail(tankId, archiveId, element) {
+    // Update UI immediately
+    $('.swal2-container .thumbnail-option').removeClass('selected').css('border-color', '#ddd');
+    element.addClass('selected').css('border-color', '#007bff');
+    
+    // Send request to update thumbnail
+    $.ajax({
+        url: '/api/tankoubons/' + tankId + '/thumbnail',
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({ archive_id: archiveId })
+    })
+    .done(function(data) {
+        if (data.success) {
+            showSuccess('Thumbnail updated successfully!');
+            // Update the tankoubon data locally to show the change immediately
+            updateTankoubonThumbnailInData(tankId, archiveId);
+            // Refresh the main display if we're in thumbnail mode
+            if (localStorage.tankoubon_viewMode === "1") {
+                updateTankoubonThumbnailInDOM(tankId, archiveId);
+            }
+        } else {
+            showError('Failed to update thumbnail: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .fail(function(xhr) {
+        showError('Failed to update thumbnail: ' + (xhr.responseJSON ? xhr.responseJSON.error : 'Network error'));
+        // Revert UI changes on error
+        $('.swal2-container .thumbnail-option').removeClass('selected').css('border-color', '#ddd');
+    });
+}
+
+function updateTankoubonThumbnailInData(tankId, archiveId) {
+    // Find and update the tankoubon in our local data
+    for (var i = 0; i < tankoubonData.length; i++) {
+        if (tankoubonData[i].id === tankId) {
+            tankoubonData[i].thumbnail = archiveId;
+            break;
+        }
+    }
+}
+
+function updateTankoubonThumbnailInDOM(tankId, archiveId) {
+    // Find the thumbnail element in the DOM and update its src
+    var thumbnailElement = $('.compact-thumb[data-tank-id="' + tankId + '"] img');
+    if (thumbnailElement.length > 0) {
+        var newThumbnailUrl = '/api/archives/' + archiveId + '/thumbnail';
+        thumbnailElement.attr('src', newThumbnailUrl);
+        // Also update data-src for lazy loading
+        thumbnailElement.attr('data-src', newThumbnailUrl);
+    }
 }
 
 function deleteTankoubon(tankId, tankName) {
@@ -591,59 +840,82 @@ function displayArchives(tankoubon) {
         archivesHtml += '<button class="stdbtn" onclick="deleteTankoubon(\'' + tankoubon.id + '\')" style="background-color: #f44336; color: white;">';
         archivesHtml += '<i class="fa fa-trash"></i> Delete</button>';
         archivesHtml += '</div>';
+
+        // Quick navigation section (upper part)
+        archivesHtml += '<div style="margin-bottom: 25px; background: #2c3e50; padding: 12px; border-radius: 8px; border: 1px solid #34495e;">';
+        archivesHtml += '<h4 style="margin-top: 0; margin-bottom: 10px; color: #ecf0f1; font-size: 14px; display: flex; align-items: center;">';
+        archivesHtml += '<i class="fa fa-fast-forward" style="margin-right: 6px; color: #3498db;"></i> Quick Navigation';
+        archivesHtml += '</h4>';
         
-        archivesHtml += '<div style="display: grid; gap: 10px;">';
+        // Create dropdown for quick navigation
+        archivesHtml += '<div style="position: relative; display: inline-block; width: 100%;">';
+        archivesHtml += '<select id="quick-nav-dropdown" onchange="openSelectedArchive(this.value, \'' + tankoubon.id + '\')" ';
+        archivesHtml += 'style="width: 100%; padding: 8px 12px; font-size: 13px; background: #1a202c; color: #e2e8f0; border: 1px solid #4a5568; border-radius: 4px; cursor: pointer;">';
+        archivesHtml += '<option value="">Select an archive to read...</option>';
         
         archivesList.forEach(function(archive, index) {
-            archivesHtml += '<div class="archive-item" style="display: flex; align-items: center; padding: 12px; border: 1px solid #ddd; border-radius: 8px; background: #f9f9f9;">';
+            var archiveId = archive.arcid || archive;
+            var title = archive.title || 'Archive ' + (index + 1);
+            var displayTitle = (index + 1) + '. ' + (title.length > 60 ? title.substring(0, 60) + '...' : title);
             
-            // Order number
-            archivesHtml += '<div style="margin-right: 15px; font-weight: bold; color: #666; min-width: 35px; text-align: center; background: #e0e0e0; padding: 5px 8px; border-radius: 50%;">';
-            archivesHtml += (index + 1) + '</div>';
+            archivesHtml += '<option value="' + archiveId + '">' + escapeHtml(displayTitle) + '</option>';
+        });
+        
+        archivesHtml += '</select>';
+        archivesHtml += '</div>';
+        
+        archivesHtml += '</div>';
+        archivesHtml += '</div>';
+
+        // Thumbnail wall section (lower part)
+        archivesHtml += '<div>';
+        archivesHtml += '<h4 style="margin-top: 0; margin-bottom: 15px; color: #333; font-size: 16px; display: flex; align-items: center;">';
+        archivesHtml += '<i class="fa fa-th-large" style="margin-right: 8px; color: #28a745;"></i> Thumbnail Wall';
+        archivesHtml += '</h4>';
+        archivesHtml += '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 6px;">';
+        
+        archivesList.forEach(function(archive, index) {
+            var archiveId = archive.arcid || archive;
+            var title = archive.title || 'Archive ' + (index + 1);
             
-            // Archive thumbnail (if available)
-            if (archive.arcid) {
-                archivesHtml += '<div style="margin-right: 15px;">';
-                archivesHtml += '<img src="/api/archives/' + archive.arcid + '/thumbnail" ';
-                archivesHtml += 'style="width: 60px; height: 84px; object-fit: cover; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" ';
-                archivesHtml += 'onerror="this.style.display=\'none\'" />';
+            archivesHtml += '<div class="archive-thumb-item" style="text-align: center; background: transparent; border-radius: 4px; padding: 4px; transition: transform 0.2s ease, box-shadow 0.2s ease; aspect-ratio: 2/3; display: flex; flex-direction: column; height: 240px; overflow: hidden;">';
+            
+            // Thumbnail image with number overlay
+            archivesHtml += '<div style="position: relative; margin-bottom: 6px; flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden;">';
+            archivesHtml += '<img src="/api/archives/' + archiveId + '/thumbnail" ';
+            archivesHtml += 'style="width: 100%; height: 210px; object-fit: cover; border-radius: 4px; cursor: pointer; transition: opacity 0.2s ease, box-shadow 0.2s ease; flex: none;" ';
+            archivesHtml += 'onclick="window.open(\'/reader?id=' + archiveId + '&tankoubon=' + tankoubon.id + '\', \'_blank\')" ';
+            archivesHtml += 'onerror="this.src=\'/img/noThumb.png\';" ';
+            archivesHtml += 'onmouseover="this.style.opacity=\'0.8\'; this.style.boxShadow=\'0 4px 12px rgba(0,0,0,0.3)\';" ';
+            archivesHtml += 'onmouseout="this.style.opacity=\'1\'; this.style.boxShadow=\'none\';" ';
+            archivesHtml += 'title="Click to read: ' + escapeHtml(title) + '" />';
+            
+            // Archive number overlay
+            archivesHtml += '<div style="position: absolute; top: 6px; left: 6px; background: rgba(0,0,0,0.8); color: white; padding: 3px 8px; border-radius: 12px; font-size: 12px; font-weight: bold;">';
+            archivesHtml += (index + 1);
+            archivesHtml += '</div>';
+            archivesHtml += '</div>';
+            
+            // Archive title (smaller)
+            archivesHtml += '<div style="font-size: 10px; color: #e0e0e0; margin-bottom: 4px; word-wrap: break-word; line-height: 1.2; height: 20px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical;">';
+            archivesHtml += escapeHtml(title);
+            archivesHtml += '</div>';
+            
+            // Action buttons for this archive (only remove button for logged users)
+            if ($('body').data('user-logged') === "1") {
+                archivesHtml += '<div style="display: flex; gap: 6px; justify-content: center;">';
+                archivesHtml += '<button class="stdbtn" onclick="removeArchiveFromTankoubon(\'' + tankoubon.id + '\', \'' + archiveId + '\')" ';
+                archivesHtml += 'style="background-color: #dc3545; color: white; font-size: 10px; padding: 6px 8px; border-radius: 4px; transition: background-color 0.2s ease;" ';
+                archivesHtml += 'onmouseover="this.style.backgroundColor=\'#c82333\'" ';
+                archivesHtml += 'onmouseout="this.style.backgroundColor=\'#dc3545\'" ';
+                archivesHtml += 'title="Remove from tankoubon">';
+                archivesHtml += '<i class="fa fa-times"></i></button>';
                 archivesHtml += '</div>';
             }
-            
-            // Archive info
-            archivesHtml += '<div style="flex: 1; min-width: 0;">';
-            archivesHtml += '<div style="font-weight: bold; margin-bottom: 6px; font-size: 14px; word-wrap: break-word;">';
-            archivesHtml += escapeHtml(archive.title || 'Unknown Title') + '</div>';
-            
-            if (archive.tags) {
-                var tags = archive.tags.replace(/,/g, ', ');
-                if (tags.length > 100) {
-                    tags = tags.substring(0, 100) + '...';
-                }
-                archivesHtml += '<div style="font-size: 12px; color: #666; line-height: 1.3;">' + escapeHtml(tags) + '</div>';
-            }
-            archivesHtml += '</div>';
-            
-            // Action buttons
-            archivesHtml += '<div style="display: flex; gap: 5px; flex-shrink: 0;">';
-            
-            if (archive.arcid) {
-                archivesHtml += '<a href="/reader?id=' + archive.arcid + '&tankoubon=' + tankoubon.id + '" class="stdbtn" target="_blank" ';
-                archivesHtml += 'style="font-size: 11px; padding: 6px 10px; text-decoration: none;">';
-                archivesHtml += '<i class="fa fa-book-open"></i> Read</a>';
-            }
-            
-            // Remove button for logged users
-            if ($('body').data('user-logged') === "1") {
-                archivesHtml += '<button class="stdbtn" onclick="removeArchiveFromTankoubon(\'' + tankoubon.id + '\', \'' + (archive.arcid || archive) + '\')" ';
-                archivesHtml += 'style="background-color: #d32f2f; font-size: 11px; padding: 6px 8px;" title="Remove from tankoubon">';
-                archivesHtml += '<i class="fa fa-times"></i></button>';
-            }
-            
-            archivesHtml += '</div>';
             archivesHtml += '</div>';
         });
         
+        archivesHtml += '</div>';
         archivesHtml += '</div>';
     }
     
@@ -653,11 +925,30 @@ function displayArchives(tankoubon) {
     Swal.fire({
         title: escapeHtml(tankoubon.name) + ' (' + archiveCount + ' archives)',
         html: archivesHtml,
-        width: 900,
+        width: '95%',
+        maxWidth: '1400px',
         showCloseButton: true,
         showConfirmButton: false,
         customClass: {
-            htmlContainer: 'archives-modal-content'
+            htmlContainer: 'archives-modal-content',
+            popup: 'tankoubon-view-popup'
+        },
+        didOpen: function() {
+            // Add hover effects to thumbnail items
+            $('.archive-thumb-item').hover(
+                function() {
+                    $(this).css({
+                        'transform': 'translateY(-4px)',
+                        'box-shadow': '0 4px 16px rgba(0,0,0,0.15)'
+                    });
+                },
+                function() {
+                    $(this).css({
+                        'transform': 'translateY(0)',
+                        'box-shadow': '0 2px 8px rgba(0,0,0,0.1)'
+                    });
+                }
+            );
         }
     });
 }
@@ -888,12 +1179,14 @@ function displayManageArchives(tankoubon) {
     var html = '<div id="sortable-list" style="list-style: none; padding: 0; margin: 0;">';
     
     archivesList.forEach(function(archive, index) {
-        html += '<div class="archive-item" data-archive-id="' + (archive.arcid || archive) + '" ';
+        html += '<div class="archive-item draggable-item" ';
+        html += 'data-archive-id="' + (archive.arcid || archive) + '" ';
+        html += 'draggable="true" ';
         html += 'style="display: flex; align-items: center; padding: 12px; margin-bottom: 8px; ';
-        html += 'border: 1px solid #ddd; border-radius: 6px; background: #f9f9f9; cursor: move;">';
+        html += 'border: 1px solid #ddd; border-radius: 6px; background: #f9f9f9; cursor: grab; transition: all 0.2s ease;">';
         
-        html += '<div style="margin-right: 10px; color: #666;"><i class="fa fa-grip-vertical"></i></div>';
-        html += '<div style="margin-right: 15px; font-weight: bold; color: #666; min-width: 30px;">' + (index + 1) + '</div>';
+        html += '<div class="drag-handle" style="margin-right: 10px; color: #666; cursor: grab;"><i class="fa fa-grip-vertical"></i></div>';
+        html += '<div class="archive-order" style="margin-right: 15px; font-weight: bold; color: #666; min-width: 30px;">' + (index + 1) + '</div>';
         
         if (archive.arcid) {
             html += '<img src="/api/archives/' + archive.arcid + '/thumbnail" ';
@@ -907,12 +1200,16 @@ function displayManageArchives(tankoubon) {
         html += '</div>';
         
         html += '<button class="stdbtn remove-archive-btn" data-archive-id="' + (archive.arcid || archive) + '" ';
-        html += 'style="background-color: #d32f2f; font-size: 11px; padding: 4px 6px; margin-left: 10px;" title="Remove">';
+        html += 'style="background-color: #d32f2f; color: white; font-size: 11px; padding: 4px 6px; margin-left: 10px;" title="Remove">';
         html += '<i class="fa fa-times"></i></button>';
         
         html += '</div>';
     });
     
+    html += '</div>';
+    html += '<div style="margin-top: 15px; padding: 10px; background: #e3f2fd; border-radius: 4px; font-size: 12px; color: #1976d2;">';
+    html += '<i class="fa fa-info-circle" style="margin-right: 5px;"></i>';
+    html += 'Drag and drop archives to reorder them. Click the grip icon or drag anywhere on an archive item.';
     html += '</div>';
     
     Swal.fire({
@@ -926,22 +1223,12 @@ function displayManageArchives(tankoubon) {
             htmlContainer: 'manage-archives-content'
         },
         didOpen: function() {
-            // Initialize sortable
-            $('#sortable-list').sortable({
-                handle: '.fa-grip-vertical',
-                axis: 'y',
-                helper: function(e, ui) {
-                    ui.addClass('ui-sortable-helper');
-                    return ui;
-                },
-                start: function(e, ui) {
-                    ui.placeholder.height(ui.helper.height());
-                }
-            });
+            initializeDragAndDrop();
             
             // Attach remove handlers
             $('.remove-archive-btn').on('click', function(e) {
                 e.stopPropagation();
+                e.preventDefault();
                 var archiveId = $(this).data('archive-id');
                 var archiveItem = $(this).closest('.archive-item');
                 
@@ -969,9 +1256,113 @@ function displayManageArchives(tankoubon) {
     });
 }
 
+function initializeDragAndDrop() {
+    let draggedElement = null;
+    let draggedIndex = null;
+    
+    const sortableList = document.getElementById('sortable-list');
+    const archiveItems = sortableList.querySelectorAll('.draggable-item');
+    
+    archiveItems.forEach((item, index) => {
+        // Add drag event listeners
+        item.addEventListener('dragstart', function(e) {
+            draggedElement = this;
+            draggedIndex = index;
+            this.style.opacity = '0.5';
+            this.style.transform = 'rotate(2deg)';
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', this.outerHTML);
+        });
+        
+        item.addEventListener('dragend', function(e) {
+            this.style.opacity = '';
+            this.style.transform = '';
+            this.classList.remove('drag-over');
+        });
+        
+        item.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            
+            // Remove existing drag-over classes
+            archiveItems.forEach(el => el.classList.remove('drag-over'));
+            
+            if (this !== draggedElement) {
+                this.classList.add('drag-over');
+                this.style.borderTop = '3px solid #2196F3';
+            }
+        });
+        
+        item.addEventListener('dragleave', function(e) {
+            this.classList.remove('drag-over');
+            this.style.borderTop = '';
+        });
+        
+        item.addEventListener('drop', function(e) {
+            e.preventDefault();
+            
+            if (this !== draggedElement) {
+                const currentIndex = Array.from(sortableList.children).indexOf(this);
+                
+                // Determine drop position
+                if (draggedIndex < currentIndex) {
+                    // Insert after the target
+                    this.parentNode.insertBefore(draggedElement, this.nextSibling);
+                } else {
+                    // Insert before the target
+                    this.parentNode.insertBefore(draggedElement, this);
+                }
+                
+                updateOrderNumbers();
+            }
+            
+            // Clean up drag styles
+            archiveItems.forEach(el => {
+                el.classList.remove('drag-over');
+                el.style.borderTop = '';
+            });
+        });
+        
+        // Add hover effects
+        item.addEventListener('mouseenter', function() {
+            if (!this.classList.contains('drag-over')) {
+                this.style.backgroundColor = '#f0f0f0';
+                this.style.transform = 'translateX(2px)';
+            }
+        });
+        
+        item.addEventListener('mouseleave', function() {
+            if (!this.classList.contains('drag-over')) {
+                this.style.backgroundColor = '#f9f9f9';
+                this.style.transform = '';
+            }
+        });
+        
+        // Change cursor when dragging
+        const dragHandle = item.querySelector('.drag-handle');
+        dragHandle.addEventListener('mousedown', function() {
+            item.style.cursor = 'grabbing';
+            dragHandle.style.cursor = 'grabbing';
+        });
+        
+        dragHandle.addEventListener('mouseup', function() {
+            item.style.cursor = 'grab';
+            dragHandle.style.cursor = 'grab';
+        });
+    });
+}
+
+function openSelectedArchive(archiveId, tankouboId) {
+    if (archiveId) {
+        window.open('/reader?id=' + archiveId + '&tankoubon=' + tankouboId, '_blank');
+        // Reset dropdown to placeholder
+        document.getElementById('quick-nav-dropdown').value = '';
+    }
+}
+
 function updateOrderNumbers() {
     $('#sortable-list .archive-item').each(function(index) {
-        $(this).find('[style*="min-width: 30px"]').first().text(index + 1);
+        $(this).find('.archive-order').text(index + 1);
     });
 }
 
