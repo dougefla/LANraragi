@@ -10,6 +10,7 @@ use LANraragi::Utils::Redis    qw(redis_decode);
 use LANraragi::Model::Archive;
 use LANraragi::Model::Tankoubon;
 use LANraragi::Model::Search;
+use Sort::Naturally;
 
 # Meta-information about your plugin.
 sub plugin_info {
@@ -47,6 +48,10 @@ sub plugin_info {
             {
                 type => "bool",
                 desc => "Dry run mode (shows what tankoubons would be created without actually creating them)"
+            },
+            {
+                type => "bool",
+                desc => "Remove all existing tankoubons before creating new ones (WARNING: This will delete all existing tankoubons!)"
             }
         ]
     );
@@ -56,7 +61,7 @@ sub plugin_info {
 sub run_script {
     shift;
     my $lrr_info = shift;
-    my ( $group_by_series, $group_by_artist, $group_by_title, $min_archives, $skip_existing, $dry_run ) = @_;
+    my ( $group_by_series, $group_by_artist, $group_by_title, $min_archives, $skip_existing, $dry_run, $remove_all_existing ) = @_;
     
     # Set defaults
     $min_archives ||= 2;
@@ -68,7 +73,26 @@ sub run_script {
     my $skipped_count = 0;
     
     $logger->info("Starting auto-tankoubon creation process...");
-    $logger->info("Parameters: series=$group_by_series, artist=$group_by_artist, title=$group_by_title, min=$min_archives, skip_existing=$skip_existing, dry_run=$dry_run");
+    $logger->info("Parameters: series=$group_by_series, artist=$group_by_artist, title=$group_by_title, min=$min_archives, skip_existing=$skip_existing, dry_run=$dry_run, remove_all=$remove_all_existing");
+    
+    # Remove all existing tankoubons if requested
+    if ($remove_all_existing) {
+        if ($dry_run) {
+            $logger->info("DRY RUN: Would remove all existing tankoubons");
+        } else {
+            $logger->info("Removing all existing tankoubons...");
+            my ($total, $filtered, @tankoubon_list) = LANraragi::Model::Tankoubon::get_tankoubon_list(-1);  # Get all tankoubons
+            my $removed_count = 0;
+            for my $tank (@tankoubon_list) {
+                if (LANraragi::Model::Tankoubon::delete_tankoubon($tank->{id})) {
+                    $removed_count++;
+                } else {
+                    $logger->warn("Failed to delete tankoubon: " . $tank->{name});
+                }
+            }
+            $logger->info("Removed $removed_count existing tankoubons");
+        }
+    }
     
     # Get all archives
     my @archive_list = LANraragi::Model::Archive::generate_archive_list();
@@ -175,14 +199,17 @@ sub run_script {
         # Generate tankoubon name from group key
         my $tankoubon_name = generate_tankoubon_name($group_key);
         
-        # Sort archives by index if available (for title-based groups)
-        if ($group_key =~ /^title:/) {
-            @group_archives = sort {
-                my $a_index = $a->{index} // 999999;  # Put items without index at the end
-                my $b_index = $b->{index} // 999999;
-                return $a_index <=> $b_index;
-            } @group_archives;
-        }
+        # Sort archives by natural order of titles
+        # This ensures proper ordering like "Chapter 2" before "Chapter 10"
+        @group_archives = sort {
+            # First try to sort by index if both have indices (for title-based groups)
+            if ($group_key =~ /^title:/ && defined $a->{index} && defined $b->{index}) {
+                my $index_cmp = $a->{index} <=> $b->{index};
+                return $index_cmp if $index_cmp != 0;
+            }
+            # Fall back to natural sorting of full titles
+            return ncmp($a->{title}, $b->{title});
+        } @group_archives;
         
         $logger->info("Creating tankoubon '$tankoubon_name' with " . scalar(@group_archives) . " archives");
         

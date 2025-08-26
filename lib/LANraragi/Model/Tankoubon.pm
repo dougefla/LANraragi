@@ -144,8 +144,8 @@ sub get_tankoubon ( $tank_id, $fulldata = 0, $page = 0 ) {
         %tankoubon = $redis->zrangebyscore( $tank_id, 1, "+inf", "WITHSCORES", @limit );
     }
 
-    # Sort and add IDs to archives array
-    foreach my $i ( sort { $tankoubon{$a} cmp $tankoubon{$b} } keys %tankoubon ) {
+    # Sort and add IDs to archives array (fix: use numeric sort for scores)
+    foreach my $i ( sort { $tankoubon{$a} <=> $tankoubon{$b} } keys %tankoubon ) {
         push( @archives, $i );
     }
 
