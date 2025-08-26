@@ -22,11 +22,12 @@ sub index {
     $redis->quit();
 
     $self->render(
-        template => "tankoubon",
-        title    => $self->LRR_CONF->get_htmltitle,
-        descstr  => $self->LRR_DESC,
-        csshead  => generate_themes_header($self),
-        version  => $self->LRR_VERSION
+        template   => "tankoubon",
+        title      => $self->LRR_CONF->get_htmltitle,
+        descstr    => $self->LRR_DESC,
+        csshead    => generate_themes_header($self),
+        version    => $self->LRR_VERSION,
+        userlogged => $userlogged
     );
 }
 

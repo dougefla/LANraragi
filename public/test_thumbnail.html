@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Tankoubon Thumbnail Test</title>
+    <script src="/js/vendor/jquery.min.js"></script>
+    <script src="/js/common.js"></script>
+</head>
+<body>
+    <div id="test-container"></div>
+    
+    <script>
+        // Test the thumbnail generation
+        var testTankoubon = {
+            id: "TANK_1756180763",
+            name: "test", 
+            archives: ["7526a92a7d22fc89f753e582dc18844c6d0c510d"],
+            tags: "",
+            summary: ""
+        };
+        
+        var archiveCount = testTankoubon.archives ? testTankoubon.archives.length : 0;
+        
+        // Create a fake archive object for buildThumbnailDiv
+        var fakeArchive = {
+            arcid: testTankoubon.id,
+            id: testTankoubon.id,
+            title: testTankoubon.name + ' (' + archiveCount + ' archives)',
+            tags: testTankoubon.tags || '',
+            pagecount: archiveCount
+        };
+        
+        console.log("Testing with fake archive:", fakeArchive);
+        
+        if (typeof LRR !== 'undefined' && LRR.buildThumbnailDiv) {
+            var thumbnailHtml = LRR.buildThumbnailDiv(fakeArchive, false);
+            console.log("Generated thumbnail HTML:", thumbnailHtml);
+            $('#test-container').html(thumbnailHtml);
+        } else {
+            console.error("LRR.buildThumbnailDiv not available");
+            $('#test-container').html('LRR.buildThumbnailDiv not available');
+        }
+    </script>
+</body>
+</html>

@@ -67,6 +67,9 @@
 		<a href="[% c.url_for("/config/categories") %]">[% c.lh("Modify Categories") %]</a>
 		<span style="margin-left:5px"></span>
 		<i class="fa fa-caret-right"></i>
+		<a href="[% c.url_for("/tankoubons") %]">Tankoubon Manager</a>
+		<span style="margin-left:5px"></span>
+		<i class="fa fa-caret-right"></i>
 		<a href="[% c.url_for("/stats") %]">[% c.lh("Statistics") %]</a>
 		<i class="fa fa-caret-right"></i>
 		<a href="[% c.url_for("/logs") %]">[% c.lh("Logs") %]</a>

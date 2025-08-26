@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+
+<head>
+	<title>[% title %]</title>
+
+	<meta name="viewport" content="width=device-width" />
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+	<meta name="apple-mobile-web-status-bar-style" content="black" />
+	<meta name="mobile-web-app-capable" content="yes" />
+	<meta name="apple-mobile-web-app-capable" content="yes" />
+
+	<link type="image/png" rel="icon" href="favicon.ico" />
+	<link rel="manifest" href="app.webappmanifest" />
+	<link rel="stylesheet" type="text/css" href="[% c.url_for("/css/lrr.css?$version") %]" />
+
+	<link rel="stylesheet" type="text/css" href="[% c.url_for("/css/vendor/fontawesome-all.min.css") %]" />
+	<link rel="stylesheet" type="text/css" href="[% c.url_for("/css/vendor/jquery.contextMenu.min.css") %]" />
+	<link rel="stylesheet" type="text/css" href="[% c.url_for("/css/vendor/sweetalert2.min.css") %]" />
+	<link rel="stylesheet" type="text/css" href="[% c.url_for("/css/vendor/ReactToastify.min.css") %]" />
+	[% csshead %]
+	
+	<style>
+		.archive-item {
+			cursor: move;
+			transition: background-color 0.2s;
+		}
+		.archive-item:hover {
+			background-color: #f0f0f0;
+		}
+		.archive-item.ui-sortable-helper {
+			transform: rotate(3deg);
+			box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+		}
+		.search-results {
+			max-height: 300px;
+			overflow-y: auto;
+			border: 1px solid #ddd;
+			border-radius: 4px;
+			margin-top: 10px;
+		}
+		.search-result-item {
+			padding: 10px;
+			border-bottom: 1px solid #eee;
+			cursor: pointer;
+			display: flex;
+			align-items: center;
+			gap: 10px;
+		}
+		.search-result-item:hover {
+			background-color: #f5f5f5;
+		}
+		.search-result-item img {
+			width: 40px;
+			height: 56px;
+			object-fit: cover;
+			border-radius: 2px;
+		}
+		
+		#thumbs_container {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 10px;
+			justify-content: center;
+			margin: 20px 0;
+		}
+		
+		#thumbs_container .id1 {
+			margin: 5px;
+		}
+	</style>
+
+	<script src="[% c.url_for("/js/vendor/jquery.min.js") %]" type="text/JAVASCRIPT"></script>
+	<script src="[% c.url_for("/js/vendor/preact.umd.js") %]" type="text/JAVASCRIPT"></script>
+	<script src="[% c.url_for("/js/vendor/hooks.umd.js") %]" type="text/JAVASCRIPT"></script>
+	<script src="[% c.url_for("/js/vendor/compat.umd.js") %]" type="text/JAVASCRIPT"></script>
+	<script>window.React = window.preactCompat; window.react = window.preactCompat;</script>
+	<script src="[% c.url_for("/js/vendor/clsx.min.js") %]" type="text/JAVASCRIPT"></script>
+	<script src="[% c.url_for("/js/vendor/react-toastify.umd.js") %]" type="text/JAVASCRIPT"></script>
+	<script src="[% c.url_for("/js/vendor/sweetalert2.min.js") %]" type="text/JAVASCRIPT"></script>
+	<script src="[% c.url_for("/js/common.js?$version") %]" type="text/JAVASCRIPT"></script>
+	<script src="[% c.url_for("/js/tankoubon.js?$version") %]" type="text/JAVASCRIPT"></script>
+
+</head>
+
+<body data-user-logged="[% userlogged %]">
+
+	[% IF !userlogged %]
+	<p class="info-panel">
+		<span style="color:#EB5975;font-weight:800;">
+			<i class="fa fa-exclamation-circle"></i> [% c.lh("You are not logged in. Make sure your client accepts third-party cookies before logging in.") %]
+		</span>
+		<br />
+		<i class="fa fa-chevron-right"></i>
+		<a href="[% c.url_for("/login") %]">[% c.lh("Admin Login") %]</a>
+	</p>
+	[% END %]
+
+	<div class='ido'>
+		<h2 class="ih" style="text-align:center">[% c.lh("Tankoubon Manager") %]</h2>
+		<br>
+		<div class="left-column">
+			
+			<h1 style="text-align:center">📚</h1>
+			<h2 style="text-align:center; margin-bottom: 2px">Tankoubons</h2>
+			<p style="text-align:center">[% c.lh("Manage ordered archive collections") %]</p>
+			<br>
+			
+			<div style="text-align:center; margin-bottom: 20px;">
+				<input id="return" class="stdbtn" type="button" value="⬅ [% c.lh("Return to Library") %]" onclick="window.location.href='[% c.url_for("/") %]'" />
+			</div>
+			
+		</div>
+
+		<div class="right-column">
+			
+			<div class="quick-action" style="margin-bottom: 20px;">
+				<input type="button" id="new-tankoubon-btn" class="stdbtn" value="[% c.lh('New Tankoubon') %]" />
+				
+				<div class="thumbnail-options" style="display: inline-block; margin-left: 20px;">
+					<input id="thumbnail-crop" class="fa table-option" type="checkbox"
+						title="If enabled, thumbnails that don't fit a regular A4 page will be cropped to only show the left side.">
+					<label for="thumbnail-crop" style="vertical-align: middle; padding-top:6px">[% c.lh("Crop thumbnails") %]</label>
+					
+					<a class="fa fa-th fa-2x mode-toggle thumbnail-toggle table-option" href="#"
+						id="toggle-thumbnail-view" 
+						style="margin-left: 15px; text-decoration:none; color: #43464a; font-size:20px;"
+						title="[% c.lh('Toggle Thumbnail View') %]"></a>
+				</div>
+			</div>
+			
+			<div id="tankoubon-list">
+				<div id="loading-spinner" style="text-align: center; margin: 50px;">
+					<i class="fa fa-spinner fa-spin" style="font-size: 24px;"></i>
+					<p>[% c.lh("Loading tankoubons...") %]</p>
+				</div>
+			</div>
+			
+			<div id="thumbs_container" style="display: none;">
+				<!-- Thumbnail view will be loaded here -->
+			</div>
+
+		</div>
+		
+		<div style="clear:both;"></div>
+
+	</div>
+
+	<!-- Create Tankoubon Modal -->
+	<div id="create-tankoubon-modal" style="display: none;">
+		<div style="margin-bottom: 20px;">
+			<h3>Create New Tankoubon</h3>
+		</div>
+		<div style="margin-bottom: 15px;">
+			<label for="tankoubon-name" style="display: block; margin-bottom: 5px; font-weight: bold;">Name:</label>
+			<input type="text" id="tankoubon-name" class="stdinput" style="width: 100%; padding: 8px;" placeholder="Enter tankoubon name" />
+		</div>
+		<div style="margin-bottom: 15px;">
+			<label for="tankoubon-summary" style="display: block; margin-bottom: 5px; font-weight: bold;">Summary (optional):</label>
+			<textarea id="tankoubon-summary" class="stdinput" style="width: 100%; padding: 8px; height: 80px; resize: vertical;" placeholder="Enter a description for this tankoubon..."></textarea>
+		</div>
+		<div style="margin-bottom: 15px;">
+			<label for="tankoubon-tags" style="display: block; margin-bottom: 5px; font-weight: bold;">Tags (optional):</label>
+			<input type="text" id="tankoubon-tags" class="stdinput" style="width: 100%; padding: 8px;" placeholder="Enter tags separated by commas..." />
+		</div>
+		<div style="margin-bottom: 15px;">
+			<label for="tankoubon-id" style="display: block; margin-bottom: 5px; font-weight: bold;">Custom ID (optional):</label>
+			<input type="text" id="tankoubon-id" class="stdinput" style="width: 100%; padding: 8px;" placeholder="Leave empty for auto-generated ID" />
+		</div>
+	</div>
+
+	<!-- Edit Tankoubon Modal -->
+	<div id="edit-tankoubon-modal" style="display: none;">
+		<div style="margin-bottom: 20px;">
+			<h3>Edit Tankoubon</h3>
+		</div>
+		<div style="margin-bottom: 15px;">
+			<label for="edit-tankoubon-name" style="display: block; margin-bottom: 5px; font-weight: bold;">Name:</label>
+			<input type="text" id="edit-tankoubon-name" class="stdinput" style="width: 100%; padding: 8px;" />
+		</div>
+		<div style="margin-bottom: 15px;">
+			<label for="edit-tankoubon-summary" style="display: block; margin-bottom: 5px; font-weight: bold;">Summary (optional):</label>
+			<textarea id="edit-tankoubon-summary" class="stdinput" style="width: 100%; padding: 8px; height: 80px; resize: vertical;" placeholder="Enter a description for this tankoubon..."></textarea>
+		</div>
+		<div style="margin-bottom: 15px;">
+			<label for="edit-tankoubon-tags" style="display: block; margin-bottom: 5px; font-weight: bold;">Tags (optional):</label>
+			<input type="text" id="edit-tankoubon-tags" class="stdinput" style="width: 100%; padding: 8px;" placeholder="Enter tags separated by commas..." />
+		</div>
+		<input type="hidden" id="edit-tankoubon-id" />
+	</div>
+
+	<!-- View Archives Modal -->
+	<div id="view-archives-modal" style="display: none;">
+		<div style="margin-bottom: 20px;">
+			<h3 id="archives-modal-title">Tankoubon Archives</h3>
+		</div>
+		<div id="archives-list" style="max-height: 400px; overflow-y: auto;">
+			<!-- Archives will be loaded here -->
+		</div>
+	</div>
+
+	<!-- Add Archives Modal -->
+	<div id="add-archives-modal" style="display: none;">
+		<div style="margin-bottom: 20px;">
+			<h3>Add Archives to Tankoubon</h3>
+		</div>
+		<div style="margin-bottom: 15px;">
+			<label for="archive-search" style="display: block; margin-bottom: 5px; font-weight: bold;">Search Archives:</label>
+			<input type="text" id="archive-search" class="stdinput" style="width: 100%; padding: 8px;" placeholder="Search by title, tags, or series..." />
+		</div>
+		<div id="search-results" class="search-results" style="display: none;">
+			<!-- Search results will appear here -->
+		</div>
+		<input type="hidden" id="target-tankoubon-id" />
+	</div>
+
+	<!-- Manage Archives Modal -->
+	<div id="manage-archives-modal" style="display: none;">
+		<div style="margin-bottom: 20px;">
+			<h3 id="manage-archives-title">Manage Tankoubon Archives</h3>
+			<p style="color: #666; margin: 5px 0;">Drag and drop to reorder archives</p>
+		</div>
+		<div id="sortable-archives-list" style="max-height: 500px; overflow-y: auto;">
+			<!-- Sortable archives will be loaded here -->
+		</div>
+		<input type="hidden" id="manage-tankoubon-id" />
+	</div>
+
+</body>
+
+</html>
