@@ -5,6 +5,7 @@
 const Reader = {};
 
 Reader.id = "";
+Reader.tankouboId = "";
 Reader.force = false;
 Reader.previousPage = -1;
 Reader.currentPage = -1;
@@ -113,6 +114,10 @@ Reader.initializeAll = function () {
         Reader.goToPage(pageNumber);
     });
 
+    // Tankoubon navigation event handlers
+    $(document).on("click.tankoubon-nav", "#prev-tankoubon-archive", Reader.goToPreviousTankouboArchive);
+    $(document).on("click.tankoubon-nav", "#next-tankoubon-archive", Reader.goToNextTankouboArchive);
+
     // Apply full-screen utility
     // F11 Fullscreen is totally another "Fullscreen", so its support is beyong consideration.
     if (!window.fscreen.fullscreenEnabled) {
@@ -128,9 +133,17 @@ Reader.initializeAll = function () {
     Reader.id = params.get("id");
     Reader.force = params.get("force_reload") !== null;
     Reader.currentPage = (+params.get("p") || 1) - 1;
+    Reader.tankouboId = params.get("tankoubon");
 
     // Remove the "new" tag with an api call
     Server.callAPI(`/api/archives/${Reader.id}/isnew`, "DELETE", null, I18N.ReaderErrorClearingNew, null);
+
+    // Debug: Check if tankoubon ID was found in URL
+    if (Reader.tankouboId) {
+        console.log("Found tankoubon ID in URL:", Reader.tankouboId);
+    } else {
+        console.log("No tankoubon ID found in URL");
+    }
 
     // Get basic metadata
     Server.callAPI(`/api/archives/${Reader.id}/metadata`, "GET", null, I18N.ServerInfoError,
@@ -154,6 +167,17 @@ Reader.initializeAll = function () {
             if (data.summary) {
                 $("#tagContainer").append("<div class=\"archive-summary\"/>");
                 $(".archive-summary").text(data.summary);
+            }
+
+            // Handle tankoubon navigation
+            if (data.tankoubon) {
+                console.log("Setting up tankoubon navigation with data:", data.tankoubon);
+                Reader.setupTankouboNavigation(data.tankoubon);
+            } else if (Reader.tankouboId) {
+                // If no tankoubon data from API but we have a tankoubon ID from URL,
+                // fetch tankoubon information
+                console.log("Fetching tankoubon info for ID:", Reader.tankouboId);
+                Reader.fetchTankouboInfo(Reader.tankouboId, Reader.id);
             }
 
             // Use localStorage progress value instead of the server one if needed
@@ -1085,5 +1109,81 @@ Reader.handlePaginator = function () {
         break;
     default:
         break;
+    }
+};
+
+// Tankoubon Navigation Functions
+Reader.setupTankouboNavigation = function(tankoubon) {
+    console.log("setupTankouboNavigation called with:", tankoubon);
+    Reader.tankoubon = tankoubon;
+    
+    // Check if the navigation element exists
+    const navElement = $("#tankoubon-nav");
+    console.log("Navigation element found:", navElement.length > 0);
+    
+    if (navElement.length === 0) {
+        console.error("Tankoubon navigation element not found in DOM!");
+        return;
+    }
+    
+    // Show tankoubon navigation controls
+    console.log("Showing tankoubon navigation element");
+    navElement.show();
+    
+    // In infinite scroll mode, the navigation will be positioned as a floating overlay
+    // thanks to the CSS rules we added
+    
+    // Update position display - show current position in tankoubon
+    $("#tankoubon-position").text(`${tankoubon.current_index + 1}/${tankoubon.total_archives}`);
+    console.log("Updated position to:", `${tankoubon.current_index + 1}/${tankoubon.total_archives}`);
+    
+    // Update button states
+    if (tankoubon.prev_archive) {
+        $("#prev-tankoubon-archive").removeClass('disabled').attr('title', 'Previous Archive in ' + tankoubon.name);
+    } else {
+        $("#prev-tankoubon-archive").addClass('disabled').css('color', '#666').attr('title', 'No previous archive');
+    }
+    
+    if (tankoubon.next_archive) {
+        $("#next-tankoubon-archive").removeClass('disabled').attr('title', 'Next Archive in ' + tankoubon.name);
+    } else {
+        $("#next-tankoubon-archive").addClass('disabled').css('color', '#666').attr('title', 'No next archive');
+    }
+    
+    // Set up back to tankoubon link
+    $(".fa-chevron-down").attr('href', '/tankoubons#' + tankoubon.id).attr('title', 'Back to ' + tankoubon.name);
+    
+    console.log("Tankoubon navigation setup complete");
+};
+
+Reader.fetchTankouboInfo = function(tankouboId, archiveId) {
+    Server.callAPI(`/api/tankoubons/${tankouboId}`, "GET", null, "Error fetching tankoubon info", function(data) {
+        if (data.archives) {
+            // Find the current archive's position
+            const currentIndex = data.archives.findIndex(arc => arc.arcid === archiveId);
+            if (currentIndex !== -1) {
+                const tankoubon = {
+                    id: data.id,
+                    name: data.name,
+                    current_index: currentIndex,
+                    total_archives: data.archives.length,
+                    prev_archive: currentIndex > 0 ? data.archives[currentIndex - 1].arcid : null,
+                    next_archive: currentIndex < data.archives.length - 1 ? data.archives[currentIndex + 1].arcid : null
+                };
+                Reader.setupTankouboNavigation(tankoubon);
+            }
+        }
+    });
+};
+
+Reader.goToPreviousTankouboArchive = function() {
+    if (Reader.tankoubon && Reader.tankoubon.prev_archive && !$(this).hasClass('disabled')) {
+        window.location.href = new LRR.apiURL(`/reader?id=${Reader.tankoubon.prev_archive}&tankoubon=${Reader.tankoubon.id}`);
+    }
+};
+
+Reader.goToNextTankouboArchive = function() {
+    if (Reader.tankoubon && Reader.tankoubon.next_archive && !$(this).hasClass('disabled')) {
+        window.location.href = new LRR.apiURL(`/reader?id=${Reader.tankoubon.next_archive}&tankoubon=${Reader.tankoubon.id}`);
     }
 };

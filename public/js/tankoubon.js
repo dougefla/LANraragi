@@ -4,6 +4,9 @@
  */
 
 var tankoubonData = [];
+var currentPage = 1;
+var totalTankoubons = 0;
+var tankoubonsPerPage = 100; // Default page size
 
 // Mock Index object for compatibility with LRR.buildProgressDiv
 var Index = {
@@ -36,30 +39,75 @@ function setupEventHandlers() {
     $("#thumbnail-crop").change(function () {
         localStorage.cropthumbs = $(this).prop("checked") ? "true" : "false";
         if (localStorage.tankoubon_viewMode === "1") {
-            loadTankoubons(); // Reload thumbnails with new crop setting
+            loadTankoubons(currentPage); // Reload thumbnails with new crop setting
         }
     });
     
     $("#toggle-thumbnail-view").click(function() {
         localStorage.tankoubon_viewMode = (localStorage.tankoubon_viewMode === "0") ? "1" : "0";
         updateViewMode();
-        loadTankoubons();
+        loadTankoubons(currentPage);
+        return false;
+    });
+    
+    // Pagination controls
+    $(document).on('click', '.page-link', function(e) {
+        e.preventDefault();
+        var $link = $(this);
+        var action = $link.attr('value');
+        
+        // Don't handle disabled buttons
+        if ($link.css('cursor') === 'not-allowed' || $link.css('color') === 'rgb(204, 204, 204)') {
+            return false;
+        }
+        
+        var targetPage = currentPage;
+        var totalPages = Math.ceil(totalTankoubons / tankoubonsPerPage);
+        
+        switch(action) {
+            case 'outer-left':
+                targetPage = 1;
+                break;
+            case 'left':
+                targetPage = Math.max(1, currentPage - 1);
+                break;
+            case 'right':
+                targetPage = Math.min(totalPages, currentPage + 1);
+                break;
+            case 'outer-right':
+                targetPage = totalPages;
+                break;
+        }
+        
+        if (targetPage !== currentPage) {
+            loadTankoubons(targetPage);
+        }
+        
         return false;
     });
 }
 
-function loadTankoubons() {
-    console.log("Loading tankoubons...");
+function loadTankoubons(page = 1) {
+    console.log("Loading tankoubons for page:", page);
     $('#loading-spinner').show();
     
-    // Fetch tankoubon list from API
-    $.get('/api/tankoubons')
+    currentPage = page;
+    
+    // Fetch tankoubon list from API with pagination
+    var apiUrl = '/api/tankoubons';
+    if (page > 1) {
+        apiUrl += '?page=' + page;
+    }
+    
+    $.get(apiUrl)
         .done(function(data) {
             console.log("Tankoubon API response:", data);
             if (data.result) {
                 tankoubonData = data.result;
-                console.log("Loaded", tankoubonData.length, "tankoubons");
+                totalTankoubons = data.total || tankoubonData.length;
+                console.log("Loaded", tankoubonData.length, "tankoubons (page", page, "of", Math.ceil(totalTankoubons / tankoubonsPerPage), ")");
                 renderTankoubonList();
+                renderPagination();
             } else {
                 showError('Failed to load tankoubons');
             }
@@ -574,7 +622,7 @@ function displayArchives(tankoubon) {
             archivesHtml += '<div style="display: flex; gap: 5px; flex-shrink: 0;">';
             
             if (archive.arcid) {
-                archivesHtml += '<a href="/reader?id=' + archive.arcid + '" class="stdbtn" target="_blank" ';
+                archivesHtml += '<a href="/reader?id=' + archive.arcid + '&tankoubon=' + tankoubon.id + '" class="stdbtn" target="_blank" ';
                 archivesHtml += 'style="font-size: 11px; padding: 6px 10px; text-decoration: none;">';
                 archivesHtml += '<i class="fa fa-book-open"></i> Read</a>';
             }
@@ -1044,4 +1092,51 @@ function showConfirmationDialog(title, message, confirmText, cancelText) {
         confirmButtonText: confirmText || 'Yes',
         cancelButtonText: cancelText || 'Cancel'
     });
+}
+
+function renderPagination() {
+    // Add pagination controls similar to the reader's navigation
+    var totalPages = Math.ceil(totalTankoubons / tankoubonsPerPage);
+    
+    if (totalPages <= 1) {
+        $('#pagination-container').empty();
+        return;
+    }
+    
+    var paginationHtml = '<div id="pagination-controls" class="sn paginator" style="text-align: center; margin: 20px 0; padding: 15px;">';
+    
+    // Previous buttons
+    var prevDisabled = currentPage <= 1;
+    paginationHtml += '<a class="fa fa-angle-double-left page-link" style="font-size: 1.5em; margin: 0 5px; ' + (prevDisabled ? 'color: #ccc; cursor: not-allowed;' : 'cursor: pointer;') + '" value="outer-left" title="First Page"></a>';
+    paginationHtml += '<a class="fa fa-angle-left page-link" style="font-size: 1.5em; margin: 0 5px; ' + (prevDisabled ? 'color: #ccc; cursor: not-allowed;' : 'cursor: pointer;') + '" value="left" title="Previous Page"></a>';
+    
+    // Page counter
+    paginationHtml += '<div class="pagecount" style="display: inline-block; margin: 0 15px; font-weight: bold; font-size: 14px;">';
+    paginationHtml += '<span class="current-page">' + currentPage + '</span> / ';
+    paginationHtml += '<span class="max-page">' + totalPages + '</span>';
+    paginationHtml += '</div>';
+    
+    // Next buttons
+    var nextDisabled = currentPage >= totalPages;
+    paginationHtml += '<a class="fa fa-angle-right page-link" style="font-size: 1.5em; margin: 0 5px; ' + (nextDisabled ? 'color: #ccc; cursor: not-allowed;' : 'cursor: pointer;') + '" value="right" title="Next Page"></a>';
+    paginationHtml += '<a class="fa fa-angle-double-right page-link" style="font-size: 1.5em; margin: 0 5px; ' + (nextDisabled ? 'color: #ccc; cursor: not-allowed;' : 'cursor: pointer;') + '" value="outer-right" title="Last Page"></a>';
+    
+    paginationHtml += '</div>';
+    
+    // Add pagination to the container or create one if it doesn't exist
+    var paginationContainer = $('#pagination-container');
+    if (paginationContainer.length === 0) {
+        $('#tankoubon-list').after('<div id="pagination-container"></div>');
+        $('#thumbs_container').after('<div id="pagination-container-thumbs"></div>');
+        paginationContainer = $('#pagination-container');
+    }
+    
+    // Show pagination in the appropriate container
+    if (localStorage.tankoubon_viewMode === "1") {
+        $('#pagination-container').hide();
+        $('#pagination-container-thumbs').html(paginationHtml).show();
+    } else {
+        $('#pagination-container-thumbs').hide();
+        $('#pagination-container').html(paginationHtml).show();
+    }
 }

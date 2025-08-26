@@ -18,6 +18,44 @@
     <link rel="stylesheet" type="text/css" href="[% c.url_for("/css/vendor/ReactToastify.min.css") %]" />
     <link rel="stylesheet" type="text/css" href="[% c.url_for("/css/vendor/sweetalert2.min.css") %]" />
     [% csshead %]
+    
+    <style>
+        /* Override infinite scroll hiding for tankoubon navigation */
+        body.infinite-scroll #tankoubon-nav {
+            display: block !important;
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: rgba(0, 0, 0, 0.9);
+            border-radius: 6px;
+            padding: 6px 10px;
+            z-index: 998;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            font-size: 0.9em;
+        }
+        
+        body.infinite-scroll #tankoubon-nav.hidden-nav {
+            display: none !important;
+        }
+        
+        /* Compact layout for infinite scroll mode */
+        body.infinite-scroll #tankoubon-nav a {
+            color: #fff;
+            margin: 0 4px;
+            font-size: 1.2em;
+        }
+        
+        body.infinite-scroll #tankoubon-nav .pagecount {
+            color: #fff;
+            font-size: 0.9em;
+            margin: 0 6px;
+        }
+        
+        /* Adjust other fixed elements to make room */
+        body.infinite-scroll #i4 .absolute-options {
+            top: 60px;
+        }
+    </style>
 
     <script src="[% c.url_for("/js/vendor/jquery.min.js") %]" type="text/javascript"></script>
     <script src="[% c.url_for("/js/vendor/preact.umd.js") %]" type="text/JAVASCRIPT"></script>
@@ -65,6 +103,18 @@
 
         <div id="i4">
             [% INCLUDE fileinfo %] [% INCLUDE pagesel %] [% INCLUDE arrows %]
+            
+            <!-- Tankoubon Navigation Row (bottom only) -->
+            <div id="tankoubon-nav" class="sn paginator" style="display: none; margin-top: 10px;">
+                <a id="prev-tankoubon-archive" class="fa fa-angle-double-left" style="font-size: 1.5em; cursor: pointer;" title="Previous Archive in Tankoubon"></a>
+                <a class="fa fa-chevron-down" style="font-size: 1.5em;" href="#" title="Back to Tankoubon"></a>
+                
+                <div class="pagecount">
+                    <span id="tankoubon-position">...</span>
+                </div>
+                
+                <a id="next-tankoubon-archive" class="fa fa-angle-double-right" style="font-size: 1.5em; cursor: pointer;" title="Next Archive in Tankoubon"></a>
+            </div>
         </div>
 
         <div id="i5">
@@ -277,6 +327,7 @@
 <!-- -->
 [% BLOCK arrows %]
 <div class="sn paginator">
+    <!-- Page Navigation -->
     <a class="fa fa-angle-double-left page-link" style="font-size: 1.5em;" value="outer-left"></a>
     <a class="fa fa-angle-left page-link" style="font-size: 1.5em;" value="left"></a>
 

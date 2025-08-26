@@ -61,6 +61,39 @@ sub serve_metadata {
     $redis->quit;
 
     if ($arcdata) {
+        # Add tankoubon navigation information
+        my @tankoubons = LANraragi::Model::Tankoubon::get_tankoubons_containing_archive($id);
+        
+        if (@tankoubons) {
+            # Get navigation info for the first tankoubon (most archives are in only one)
+            my $tank_id = $tankoubons[0];
+            my ($total, $filtered, %tank_data) = LANraragi::Model::Tankoubon::get_tankoubon($tank_id, -1, 0); # Get all archives, IDs only
+            
+            if (%tank_data && $tank_data{archives}) {
+                my @archive_ids = @{$tank_data{archives}};
+                my $current_index = -1;
+                
+                # Find current archive's position
+                for my $i (0..$#archive_ids) {
+                    if ($archive_ids[$i] eq $id) {
+                        $current_index = $i;
+                        last;
+                    }
+                }
+                
+                if ($current_index >= 0) {
+                    $arcdata->{tankoubon} = {
+                        id => $tank_id,
+                        name => $tank_data{name},
+                        current_index => $current_index,
+                        total_archives => scalar(@archive_ids),
+                        prev_archive => $current_index > 0 ? $archive_ids[$current_index - 1] : undef,
+                        next_archive => $current_index < $#archive_ids ? $archive_ids[$current_index + 1] : undef
+                    };
+                }
+            }
+        }
+        
         $self->render( json => $arcdata );
     } else {
         render_api_response( $self, "metadata", "This ID doesn't exist on the server." );

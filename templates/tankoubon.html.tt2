@@ -138,6 +138,10 @@
 			<div id="thumbs_container" style="display: none;">
 				<!-- Thumbnail view will be loaded here -->
 			</div>
+			
+			<!-- Pagination containers -->
+			<div id="pagination-container" style="display: none;"></div>
+			<div id="pagination-container-thumbs" style="display: none;"></div>
 
 		</div>
 		
