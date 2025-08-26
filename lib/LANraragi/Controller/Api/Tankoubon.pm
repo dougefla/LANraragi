@@ -42,6 +42,11 @@ sub get_tankoubon {
     my $fulldata = $req->param('include_full_data');
     my $page     = $req->param('page');
 
+    # If include_full_data is requested and no page is specified, show all archives
+    if ($fulldata && !defined $page) {
+        $page = -1;
+    }
+
     my ( $total, $filtered, %tankoubon ) = LANraragi::Model::Tankoubon::get_tankoubon( $tank_id, $fulldata, $page );
 
     unless (%tankoubon) {

@@ -36,7 +36,7 @@ sub get_tankoubon_list ( $page = 0, $pagesize = 0, $sort = 'name', $order = 'asc
     # Jam tanks into an array of hashes
     my @result;
     foreach my $key ( sort @tanks ) {
-        my ( $total, $filtered, %data ) = get_tankoubon($key);
+        my ( $total, $filtered, %data ) = get_tankoubon($key, 0, -1);  # Use page = -1 to get all archives for accurate count
         push( @result, \%data );
     }
 
@@ -158,6 +158,10 @@ sub get_tankoubon ( $tank_id, $fulldata = 0, $page = 0 ) {
     my $redis       = LANraragi::Model::Config->get_redis;
     my $keysperpage = LANraragi::Model::Config->get_pagesize;
 
+    # When fulldata is requested and no explicit page is provided, default to showing all archives
+    if ($fulldata && !defined $page) {
+        $page = -1;
+    }
     $page //= 0;
 
     if ( $tank_id eq "" ) {
