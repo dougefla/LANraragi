@@ -43,24 +43,15 @@
         }
 
         .tankoubon-card {
-            background: none repeat scroll 0 0 #43464E;
-            border: 1px none;
+            background: #363940;
             border-radius: 4px;
-            display: inline-block;
-            margin: 1px;
-            padding: 1px;
-            vertical-align: top;
-            min-height: 265px;
-            cursor: pointer;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-            position: relative;
             display: flex;
             flex-direction: column;
-        }
-
-        .tankoubon-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+            position: relative;
+            cursor: pointer;
+            aspect-ratio: 0.7;
+            min-height: unset;
+            height: 100%;
         }
 
         .tankoubon-card .info {
@@ -69,36 +60,23 @@
         }
 
         .tankoubon-card .name {
-            font-weight: bold;
-            margin: auto;
-            text-align: center;
-            width: 98%;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            font-size: 8pt;
-            padding: 1px 0;
-            min-height: 16px;
+            display: none; /* Hide the title while keeping the element in DOM */
         }
 
         .tankoubon-card .preview {
-            height: 245px;
-            margin: 0 auto;
-            overflow: hidden;
-            position: relative;
-            text-align: center;
-            flex-grow: 1;
+            flex: 1;
             display: flex;
             align-items: center;
             justify-content: center;
+            height: auto;
+            padding: 4px;
         }
 
         .tankoubon-card .preview img {
-            max-width: 99%;
-            max-height: 242px;
+            width: 100%;
+            height: 100%;
             object-fit: contain;
-            border-radius: 3px;
-            vertical-align: middle;
+            max-height: none;
         }
 
         .archive-count {
@@ -248,29 +226,218 @@
 
         /* Responsive adjustments */
         @media (max-width: 768px) {
-            .grid-view {
-                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            /* Make the main container more compact */
+            .ido {
+                padding: 6px;
+                margin: 4px;
+                width: auto;
+                max-width: none;
             }
 
-            .tankoubon-card {
-                min-height: 240px;
+            /* Navigation styles */
+            #nb {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 4px;
+                padding: 4px;
+                font-size: 8pt;
             }
 
-            .tankoubon-card .preview {
-                height: 190px;
+            #nb a {
+                display: inline-flex;
+                align-items: center;
+                padding: 3px 6px;
+                background: rgba(54, 57, 64, 0.6);
+                border-radius: 4px;
+                white-space: nowrap;
             }
 
-            .tankoubon-card .preview img {
-                max-height: 185px;
+            #nb span {
+                display: none;
             }
 
+            #nb i.fa-caret-right {
+                display: none;
+            }
+
+            /* Adjust title spacing */
+            .ih {
+                margin: 4px auto;
+                padding-bottom: 4px;
+            }
+
+            /* Make controls more compact */
             .table-options {
                 flex-direction: column;
-                align-items: flex-start;
+                gap: 8px;
+                margin: 6px 0;
             }
 
             .table-options > div {
                 width: 100%;
+                display: flex;
+                flex-wrap: wrap;
+                gap: 4px;
+                align-items: center;
+            }
+
+            /* Action buttons container */
+            .table-options > div:first-child {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            /* Sort options container */
+            .table-options > div:nth-child(2) {
+                justify-content: space-between;
+            }
+
+            /* Page options container */
+            .table-options > div:last-child {
+                justify-content: space-between;
+            }
+
+            /* Exactly 3 thumbnails per row with proper aspect ratio */
+            .grid-view {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 4px;
+                padding: 4px;
+            }
+
+            .tankoubon-card {
+                min-height: unset;
+                margin: 0;
+                padding: 0;
+            }
+
+            .tankoubon-card .preview {
+                height: auto;
+                padding: 2px;
+            }
+
+            .tankoubon-card .preview img {
+                max-height: none;
+            }
+
+            .tankoubon-card .name {
+                font-size: 10px;
+                padding: 2px;
+                line-height: 1.2;
+            }
+
+            .archive-count {
+                font-size: 7pt;
+                padding: 1px 3px;
+                top: 8px;
+            }
+
+            /* Make buttons more compact */
+            .table-options .stdbtn {
+                width: 100%;
+                min-width: 0;
+                padding: 6px;
+                height: auto;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 4px;
+                font-size: 11px;
+            }
+
+            .table-options select {
+                flex: 1;
+                min-width: 60px;
+                padding: 6px;
+                height: auto;
+                font-size: 11px;
+            }
+
+            .sort-options {
+                width: 100%;
+                justify-content: space-between;
+            }
+
+            .sort-order {
+                padding: 4px;
+            }
+
+            .sort-order i {
+                font-size: 1.2em;
+            }
+
+            .view-options {
+                width: 100%;
+                display: flex;
+                justify-content: center;
+                gap: 8px;
+                margin-top: 4px;
+            }
+
+            .mode-toggle {
+                padding: 4px;
+                font-size: 1.2em;
+            }
+
+            /* List view adjustments */
+            .table-list {
+                font-size: 11px;
+            }
+
+            .table-list th,
+            .table-list td {
+                padding: 8px 6px;
+            }
+
+            .table-list td:not(:first-child) {
+                display: none;
+            }
+
+            .table-list td:first-child {
+                white-space: normal;
+                line-height: 1.2;
+            }
+
+            /* Empty state and loading adjustments */
+            #empty-state, #loading-indicator {
+                padding: 16px 8px;
+                font-size: 12px;
+            }
+
+            #empty-state i, #loading-indicator i {
+                font-size: 2em;
+                margin-bottom: 8px;
+            }
+
+            /* Improve touch targets while keeping compact */
+            .stdbtn,
+            select,
+            .mode-toggle,
+            .sort-order {
+                min-height: 36px;
+                min-width: 36px;
+            }
+
+            /* Add touch feedback */
+            .tankoubon-card:active,
+            .table-list tr:active {
+                background-color: #4a4e57;
+            }
+
+            .mode-toggle:active,
+            .sort-order:active {
+                opacity: 0.7;
+            }
+        }
+
+        /* Additional breakpoint for very small screens */
+        @media (max-width: 320px) {
+            .tankoubon-card {
+                aspect-ratio: 0.7;
+            }
+
+            .tankoubon-card .preview {
+                padding: 1px;
             }
         }
     </style>

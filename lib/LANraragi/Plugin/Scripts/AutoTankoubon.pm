@@ -26,7 +26,7 @@ sub plugin_info {
                       "Supports titles in English, Japanese, and Chinese. " .
                       "Archives that appear to belong to the same series will be grouped into a tankoubon.",
         icon        =>
-          "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAYAAACNiR0NAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAB3RJTUUH4wYCFQocjU4r+QAAAB1pVFh0Q29tbWVudAAAAAAAQ3JlYXRlZCB3aXRoIEdJTVBkLmUHAAAEZElEQVQ4y42T3WtTdxzGn/M7J+fk5SRpTk7TxMZkXU84tTbVNrUT3YxO7HA4pdtQZDe7cgx2s8vBRvEPsOwFYTDYGJUpbDI2wV04cGXCGFLonIu1L2ptmtrmxeb1JDkvv121ZKVze66f74eH7/f5MmjRwMCAwrt4/9KDpflMJpPHvyiR2DPcJklJ3TRDDa0xk36cvrm8vDwHAAwAqKrqjjwXecPG205wHBuqa9rk77/d/qJYLD7cCht5deQIIczbgiAEKLVAKXWUiqVV06Tf35q8dYVJJBJem2A7Kwi2nQzDZig1CG93+PO5/KN6tf5NKpVqbsBUVVVFUUxwHJc1TXNBoxojS7IbhrnLMMx9pVJlBqFQKBKPxwcBkJYgjKIo3QCE1nSKoghbfJuKRqN2RVXexMaQzWaLezyeEUEQDjscjk78PxFFUYRkMsltJgGA3t7eyMLCwie6rr8iCILVbDbvMgwzYRjGxe0o4XC4s1AoHPP5fMP5/NNOyzLKAO6Ew+HrDADBbre/Ryk9nzx81FXJNlEpVpF+OqtpWu2MpmnXWmH9/f2umZmZi4cOHXnLbILLzOchhz1YerJAs9m1GwRAg2GYh7GYah488BJYzYW+2BD61AFBlmX/1nSNRqN9//792ujoaIPVRMjOKHoie3DytVGmp2fXCAEAjuMmu7u7Umosho6gjL/u/QHeEgvJZHJ2K/D+/fuL4+PjXyvPd5ldkShy1UXcmb4DnjgQj/fd5gDA6/XSYCAwTwh9oT3QzrS1+VDVi+vd3Tsy26yQVoFF3dAXJVmK96p9EJ0iLNOwKKU3CQCk0+lSOpP5WLDzF9Q9kZqyO0SloOs6gMfbHSU5NLRiUOuax2/HyZPHEOsLw2SbP83eu/fLxrkNp9P554XxCzVa16MC7+BPnTk9cfmH74KJE8nmga7Xy5JkZ8VKifGIHpoBb1VX8hNTd3/t/7lQ3OeXfFPvf/jBRw8ezD/a7M/aWq91cGgnJaZ2VcgSdnV1XRNNd3vAoBVVYusmnEQS65hfgSG6c+zy3Kre7nF/KrukcMW0Zg8OD08DoJutDxxOEb5IPUymwrq8ft1gLKfkFojkkRxemERCAQUACPFWRazYLJcrFGwQhyufbQQ7rFpyLMkCwGZC34qPIuwp+XPOjBFwazQ/txrdFS2GGS/Xuj+pUKLGk1Kjvlded3s72lyGW+PLbGVcmrAAgN0wTk1NWYODg9XOKltGtpazi5GigzroUnHN5nUHG1ylRsG7rDXHmnEpu4CeEtEKkqNc6QqlLc/M8uT5lLH5eq0aGxsju1O7GQB498a5s/0x9dRALPaQEDZnYwnhWJtMCCNrjeb0UP34Z6e/PW22zjPP+vwXBwfPvbw38XnXjk7GsiwKAIQQhjAMMrlsam45d+zLH6/8o6vkWcBcrXbVKQhf6bpucCwLjmUBSmmhXC419eblrbD/TAgAkUjE987xE0c7ZDmk66ajUCnq+cL63fErl25s5/8baQPaWLhx6goAAAAASUVORK5CYII=",
+          "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAYAAACNiR0NAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAB3RJTUUH4wYCFQocjU4r+QAAAB1pVFh0Q29tbWVudAAAAAAAQ3JlYXRlZCB3aXRoIEdJTVBkLmUHAAAEZElEQVQ4y42T3WtTdxzGn/M7J+fk5SRpTk7TxMZkXU84tTbVNrUT3YxO7HA4pdtQZDe7cgx2s8vBRvEPsOwFYTDYGJUpbDI2wV04cGXCGFLonIu1L2ptmtrmxeb1JDkvv121ZKVze66f74eH7/f5MmjRwMCAwrt4/9KDpflMJpPHvyiR2DPcJklJ3TRDDa0xk36cvrm8vDwHAAwAqKrqjjwXecPG205wHBuqa9rk77/d/qJYLD7cCht5deQIIczbgiAEKLVAKXWUiqVV06Tf35q8dYVJJBJem2A7Kwi2nQzDZig1CG93+PO5/KN6tf5NKpVqbsBUVVVFUUxwHJc1TXNBoxojS7IbhrnLMMx9pVJlBqFQKBKPxwcBkJYgjKIo3QCE1nSKoghbfJuKRqN2RVXexMaQzWaLezyeEUEQDjscjk78PxFFUYRkMsltJgGA3t7eyMLCwie6rr8iCILVbDbvMgwzYRjGxe0o4XC4s1AoHPP5fMP5/NNOyzLKAO6Ew+HrDADBbre/Ryk9nzx81FXJNlEpVpF+OqtpWu2MpmnXWmH9/f2umZmZi4cOHXnLbILLzOchhz1YerJAs9m1GwRAg2GYh7GYah48BJYzYW+2BD61AFBlmX/1nSNRqN9//792ujoaIPVRMjOKHoie3DytVGmp2fXCAEAjuMmu7u7Umosho6gjL/u/QHeEgvJZHJ2K/D+/fuL4+PjXyvPd5ldkShy1UXcmb4DnjgQj/fd5gDA6/XSYCAwTwh9oT3QzrS1+VDVi+vd3Tsy26yQVoFF3dAXJVmK96p9EJ0iLNOwKKU3CQCk0+lSOpP5WLDzF9Q9kZqyO0SloOs6gMfbHSU5NLRiUOuax2/HyZPHEOsLw2SbP83eu/fLxrkNp9P554XxCzVa16MC7+BPnTk9cfmH74KJE8nmga7Xy5JkZ8VKifGIHpoBb1VX8hNTd3/t/7lQ3OeXfFPvf/jBRw8ezD/a7M/aWq91cGgnJaZ2VcgSdnV1XRNNd3vAoBVVYusmnEQS65hfgSG6c+zy3Kre7nF/KrukcMW0Zg8OD08DoJutDxxOEb5IPUymwrq8ft1gLKfkFojkkRxemERCAQUACPFWRazYLJcrFGwQhyufbQQ7rFpyLMkCwGZC34qPIuwp+XPOjBFwazQ/txrdFS2GGS/Xuj+pUKLGk1Kjvlded3s72lyGW+PLbGVcmrAAgN0wTk1NWYODg9XOKltGtpazi5GigzroUnHN5nUHG1ylRsG7rDXHmnEpu4CeEtEKkqNc6QqlLc/M8uT5lLH5eq0aGxsju1O7GQB498a5s/0x9dRALPaQEDZnYwnhWJtMCCNrjeb0UP34Z6e/PW22zjPP+vwXBwfPvbw38XnXjk7GsiwKAIQQhjAMMrlsam45d+zLH6/8o6vkWcBcrXbVKQhf6bpucCwLjmUBSmmhXC419eblrbD/TAgAkUjE987xE0c7ZDmk66ajUCnq+cL63fErl25s5/8baQPaWLhx6goAAAAASUVORK5CYII=",
         parameters  => [
             { type => "bool", desc => "Delete all existing tankoubons before creating new ones" },
             { type => "bool", desc => "Use only title matching (ignore metadata)" },
@@ -282,6 +282,25 @@ sub extract_number {
     return 0;  # Return 0 if no number found
 }
 
+# Helper function to check if a tankoubon with the given name exists
+sub get_tankoubon_by_name {
+    my ($name) = @_;
+    my $logger = get_plugin_logger();
+    
+    # Get all tankoubons
+    my ($total, $filtered, @tanks) = LANraragi::Model::Tankoubon::get_tankoubon_list(0);
+    
+    # Search for a tankoubon with the exact same name
+    foreach my $tank (@tanks) {
+        if (lc($tank->{name}) eq lc($name)) {
+            $logger->info("Found existing tankoubon with name: $name");
+            return $tank->{id};
+        }
+    }
+    
+    return undef;
+}
+
 # Mandatory function to be implemented by your script
 sub run_script {
     shift;
@@ -404,23 +423,26 @@ sub run_script {
                 
                 $logger->info("Creating tankoubon for series: $series_name with " . scalar(@archives) . " archives");
                 
-                # Sort archives by natural sort of title if numbers are the same
-                @archives = sort { 
-                    # Convert both numbers to integers for proper numeric comparison
-                    my $num_a = int($a->{number} || 0);
-                    my $num_b = int($b->{number} || 0);
-                    my $num_diff = $num_a <=> $num_b;
-                    return $num_diff if $num_diff != 0;
-                    return natural_sort_key($a->{title}) cmp natural_sort_key($b->{title});
-                } @archives;
+                # Check if a tankoubon with this name already exists
+                my $existing_tank_id = get_tankoubon_by_name($series_name);
+                my $tank_id;
                 
-                # Create tankoubon - pass undef as second argument since we're creating a new one
-                my $tank_id = LANraragi::Model::Tankoubon::create_tankoubon($series_name, undef);
-                unless ($tank_id) {
-                    $logger->error("Failed to create tankoubon for series: $series_name");
-                    next;
+                if ($existing_tank_id) {
+                    $logger->info("Using existing tankoubon with ID: $existing_tank_id");
+                    $tank_id = $existing_tank_id;
+                } else {
+                    # Create new tankoubon
+                    $tank_id = LANraragi::Model::Tankoubon::create_tankoubon($series_name, undef);
+                    unless ($tank_id) {
+                        $logger->error("Failed to create tankoubon for series: $series_name");
+                        next;
+                    }
+                    $tanks_created++;
                 }
-                $tanks_created++;
+                
+                # Get existing archives in the tankoubon
+                my ($total, $filtered, %tank) = LANraragi::Model::Tankoubon::get_tankoubon($tank_id);
+                my %existing_archives = map { $_ => 1 } @{$tank{archives} || []};
                 
                 # Add archives to tankoubon in order
                 my $first_archive;
@@ -431,6 +453,12 @@ sub run_script {
                         $logger->warn("Invalid archive data found, skipping");
                         $success = 0;
                         last;
+                    }
+                    
+                    # Skip if archive is already in the tankoubon
+                    if ($existing_archives{$archive->{id}}) {
+                        $logger->debug("Archive " . $archive->{title} . " (" . $archive->{id} . ") already in tankoubon $tank_id, skipping");
+                        next;
                     }
                     
                     $logger->debug("Adding archive " . $archive->{title} . " (" . $archive->{id} . ") to tankoubon $tank_id");

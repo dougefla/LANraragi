@@ -313,7 +313,7 @@ sub compute_search_filter ($filter) {
     # * % for multiple characters
     # - to exclude the next tag
 
-    $b = reverse($filter);
+    my $b = reverse($filter);
     while ( $b ne "" ) {
 
         my $char  = chop $b;

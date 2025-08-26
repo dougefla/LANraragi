@@ -209,16 +209,18 @@ sub get_tankoubon ( $tank_id, $fulldata = 0, $page = 0, $size = undef ) {
     # Declare some needed variables
     my @allowed_keys = ( 'name', 'summary', 'tags', 'archives', 'full_data', 'id', 'cover_archive' );
     my @archives;
-    my $offset = ($page + 0) * ($keysperpage + 0);  # Force numeric context
-    my @limit = split( ' ', "LIMIT $offset $keysperpage" );
     my %tank  = fetch_metadata_fields($tank_id);
-
     my %tankoubon;
 
-    # Grab page - if size is -1 or negative, get all archives
+    # If size is negative, get all archives without pagination
     if ( defined $size && $size < 0 ) {
+        $logger->debug("Getting all archives without pagination for tankoubon $tank_id");
         %tankoubon = $redis->zrangebyscore( $tank_id, 1, "+inf", "WITHSCORES" );
     } else {
+        # Apply pagination
+        my $offset = ($page + 0) * ($keysperpage + 0);  # Force numeric context
+        my @limit = split( ' ', "LIMIT $offset $keysperpage" );
+        $logger->debug("Getting paginated archives for tankoubon $tank_id (page: $page, size: $keysperpage)");
         %tankoubon = $redis->zrangebyscore( $tank_id, 1, "+inf", "WITHSCORES", @limit );
     }
 
@@ -234,18 +236,7 @@ sub get_tankoubon ( $tank_id, $fulldata = 0, $page = 0, $size = undef ) {
         eval { $tank{archives} = \@archives };
     }
 
-    if ($@) {
-        $logger->error("Couldn't deserialize contents of Tankoubon $tank_id! $@");
-    }
-
-    # Add the key as well
-    $tank{id} = $tank_id;
-
-    %tank = filter_hash_by_keys( \@allowed_keys, %tank );
-
-    my $total = $redis->zcount($tank_id, 1, "+inf");
-
-    return ( $total, $#archives + 1, %tank );
+    return (scalar @archives, scalar @archives, %tank);
 }
 
 # delete_tankoubon(tankoubonid)

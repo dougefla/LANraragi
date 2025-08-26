@@ -33,29 +33,56 @@ Reader.initializeAll = function () {
     const urlParams = new URLSearchParams(window.location.search);
     const tankId = urlParams.get('tank');
     if (tankId) {
+        console.log('Initializing tankoubon reader with tankId:', tankId);
         // Load tankoubon data
-        Server.callAPI(`/api/tankoubons/${tankId}`, "GET", null, I18N.ServerInfoError,
+        Server.callAPI(`/api/tankoubons/${tankId}`, "GET", { size: -1 }, I18N.ServerInfoError,
             (tank) => {
+                console.log('Initial tankoubon data:', tank);
+                console.log('Total archives in response:', tank.archives ? tank.archives.length : 0);
                 Reader.tankoubon = tank;
-                Reader.currentArchiveIndex = tank.archives.indexOf(Reader.id);
-                if (Reader.currentArchiveIndex !== -1) {
-                    // Show Previous Episode button if not first episode
-                    if (Reader.currentArchiveIndex > 0) {
-                        const prevArchiveId = tank.archives[Reader.currentArchiveIndex - 1];
-                        const prevHandler = () => {
-                            window.location.href = `../reader?id=${prevArchiveId}&tank=${tankId}`;
-                        };
-                        $("#prev-episode, #prev-episode-infinite").show().on("click", prevHandler);
+                
+                // Get all archives without pagination
+                console.log('Fetching complete archive list with size=-1');
+                Server.callAPI(`/api/tankoubons/${tankId}`, "GET", { size: -1 }, I18N.ServerInfoError,
+                    (fullTank) => {
+                        console.log('Full tankoubon data:', fullTank);
+                        console.log('Total archives in full response:', fullTank.archives ? fullTank.archives.length : 0);
+                        console.log('Current archive ID:', Reader.id);
+                        Reader.currentArchiveIndex = fullTank.archives.indexOf(Reader.id);
+                        console.log('Current archive index:', Reader.currentArchiveIndex);
+                        console.log('Total archives in tankoubon:', fullTank.archives.length);
+                        
+                        if (Reader.currentArchiveIndex !== -1) {
+                            // Show Previous Episode button if not first episode
+                            if (Reader.currentArchiveIndex > 0) {
+                                const prevArchiveId = fullTank.archives[Reader.currentArchiveIndex - 1];
+                                console.log('Previous archive available:', prevArchiveId);
+                                const prevHandler = () => {
+                                    window.location.href = `../reader?id=${prevArchiveId}&tank=${tankId}`;
+                                };
+                                $("#prev-episode, #prev-episode-infinite").show().on("click", prevHandler);
+                            } else {
+                                console.log('No previous archive available (first episode)');
+                            }
+                            
+                            // Show Next Episode button if not last episode
+                            if (Reader.currentArchiveIndex < fullTank.archives.length - 1) {
+                                const nextArchiveId = fullTank.archives[Reader.currentArchiveIndex + 1];
+                                console.log('Next archive available:', nextArchiveId);
+                                const nextHandler = () => {
+                                    window.location.href = `../reader?id=${nextArchiveId}&tank=${tankId}`;
+                                };
+                                $("#next-episode, #next-episode-infinite").show().on("click", nextHandler);
+                            } else {
+                                console.log('No next archive available (last episode)');
+                            }
+                        } else {
+                            console.error('Current archive not found in tankoubon archives array');
+                            console.log('Archive ID:', Reader.id);
+                            console.log('Available archive IDs:', fullTank.archives);
+                        }
                     }
-                    // Show Next Episode button if not last episode
-                    if (Reader.currentArchiveIndex < tank.archives.length - 1) {
-                        const nextArchiveId = tank.archives[Reader.currentArchiveIndex + 1];
-                        const nextHandler = () => {
-                            window.location.href = `../reader?id=${nextArchiveId}&tank=${tankId}`;
-                        };
-                        $("#next-episode, #next-episode-infinite").show().on("click", nextHandler);
-                    }
-                }
+                );
             }
         );
     }

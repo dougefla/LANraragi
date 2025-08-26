@@ -208,7 +208,7 @@
             display: flex;
             align-items: center;
             gap: 6px;
-            min-width: 120px;
+            min-width: 100px;
             justify-content: center;
         }
 
@@ -313,11 +313,11 @@
             border-radius: 4px;
             margin-bottom: 8px;
             cursor: pointer;
+            transition: transform 0.2s ease;
         }
 
         .archive-list-item:hover {
             transform: translateY(-1px);
-            transition: transform 0.2s ease;
         }
 
         .archive-list-item img {
@@ -329,11 +329,15 @@
 
         .archive-list-item .info {
             flex: 1;
+            min-width: 0;
         }
 
         .archive-list-item .title {
             font-size: 14px;
             margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .archive-list-item .stats {
@@ -444,6 +448,66 @@
             .archive-card img {
                 max-height: 185px;
             }
+
+            .grid-view {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            }
+
+            .tankoubon-card {
+                min-height: 240px;
+            }
+
+            .tankoubon-card .preview {
+                height: 190px;
+            }
+
+            .tankoubon-card .preview img {
+                max-height: 185px;
+            }
+
+            .table-options {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .table-options > div {
+                width: 100%;
+            }
+
+            .tankoubon-actions .stdbtn {
+                min-width: 80px;
+                padding: 6px 10px;
+                font-size: 12px;
+            }
+
+            .archive-list-item {
+                padding: 12px;
+                gap: 16px;
+            }
+
+            .archive-list-item img {
+                width: 50px;
+                height: 70px;
+            }
+
+            .archive-list-item .title {
+                font-size: 13px;
+                white-space: normal;
+                display: -webkit-box;
+                -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical;
+                overflow: hidden;
+            }
+
+            .archive-list-item .stats {
+                font-size: 12px;
+                margin-top: 6px;
+            }
+
+            /* Add touch feedback */
+            .archive-list-item:active {
+                background: #43464E;
+            }
         }
 
         @font-face {
@@ -542,6 +606,177 @@
         .empty-message i, .error-message i, .loading-indicator i {
             margin-bottom: 15px;
             color: inherit;
+        }
+
+        /* Mobile navigation styles */
+        @media (max-width: 768px) {
+            #nb {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 8px;
+                padding: 8px;
+                font-size: 9pt;
+            }
+
+            #nb a {
+                display: inline-flex;
+                align-items: center;
+                padding: 4px 8px;
+                background: rgba(54, 57, 64, 0.6);
+                border-radius: 4px;
+                white-space: nowrap;
+            }
+
+            #nb span {
+                display: none;
+            }
+
+            #nb i.fa-caret-right {
+                display: none;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .pagination-controls {
+                flex-direction: column;
+                gap: 12px;
+                padding: 12px;
+            }
+
+            .pagination-controls .page-nav {
+                order: 1;
+                width: 100%;
+                justify-content: center;
+            }
+
+            .pagination-controls .page-size {
+                order: 2;
+                width: 100%;
+            }
+
+            .pagination-controls .page-size label {
+                width: 100%;
+                justify-content: space-between;
+            }
+
+            .pagination-controls .pagination-info {
+                order: 0;
+                width: 100%;
+                justify-content: center;
+            }
+
+            .pagination-controls select {
+                min-width: 100px;
+            }
+
+            .tankoubon-header {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .tankoubon-cover {
+                width: 160px;
+                height: 224px;
+                margin: 0 auto;
+            }
+
+            .tankoubon-info {
+                text-align: center;
+            }
+
+            .tankoubon-title {
+                font-size: 18px;
+            }
+
+            .tankoubon-stats {
+                font-size: 0.85em;
+            }
+
+            .tankoubon-actions {
+                justify-content: center;
+            }
+
+            .archive-grid {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+                gap: 6px;
+                padding: 6px;
+            }
+
+            .episode-nav {
+                padding: 8px;
+            }
+
+            .episode-nav-item {
+                width: 24px;
+                height: 24px;
+                font-size: 11px;
+            }
+
+            .archive-card {
+                min-height: 240px;
+            }
+
+            .archive-card .thumbnail-container {
+                height: 190px;
+            }
+
+            .archive-card img {
+                max-height: 185px;
+            }
+
+            .grid-view {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            }
+
+            .tankoubon-card {
+                min-height: 240px;
+            }
+
+            .tankoubon-card .preview {
+                height: 190px;
+            }
+
+            .tankoubon-card .preview img {
+                max-height: 185px;
+            }
+
+            .table-options {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .table-options > div {
+                width: 100%;
+            }
+
+            .tankoubon-actions .stdbtn {
+                min-width: 80px;
+                padding: 6px 10px;
+                font-size: 12px;
+            }
+
+            /* Improve touch targets */
+            .archive-card,
+            .episode-nav-item,
+            .stdbtn,
+            select,
+            a {
+                min-height: 44px;
+                min-width: 44px;
+            }
+
+            /* Improve readability */
+            .tag-list {
+                font-size: 1em;
+                line-height: 1.6;
+            }
+
+            /* Add some breathing room */
+            .ido {
+                padding: 12px;
+                margin: 8px;
+            }
         }
     </style>
 
