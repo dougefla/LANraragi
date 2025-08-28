@@ -825,7 +825,7 @@ function displayArchives(tankoubon) {
         archivesHtml += '<br><br>';
         archivesHtml += '<button class="stdbtn" onclick="Swal.close(); showEditTankoubon(\'' + tankoubon.id + '\')" style="margin-right: 10px;">';
         archivesHtml += '<i class="fa fa-edit"></i> Edit Tankoubon</button>';
-        archivesHtml += '<button class="stdbtn" onclick="deleteTankoubon(\'' + tankoubon.id + '\')" style="background-color: #f44336; color: white;">';
+        archivesHtml += '<button class="stdbtn" onclick="deleteTankoubon(\'' + tankoubon.id + '\', \'' + escapeHtml(tankoubon.name) + '\')" style="background-color: #f44336; color: white;">';
         archivesHtml += '<i class="fa fa-trash"></i> Delete</button>';
         archivesHtml += '</div>';
     } else {
@@ -837,7 +837,7 @@ function displayArchives(tankoubon) {
         archivesHtml += '<i class="fa fa-sort"></i> Reorder Archives</button>';
         archivesHtml += '<button class="stdbtn" onclick="Swal.close(); showEditTankoubon(\'' + tankoubon.id + '\')" style="margin-right: 10px;">';
         archivesHtml += '<i class="fa fa-edit"></i> Edit</button>';
-        archivesHtml += '<button class="stdbtn" onclick="deleteTankoubon(\'' + tankoubon.id + '\')" style="background-color: #f44336; color: white;">';
+        archivesHtml += '<button class="stdbtn" onclick="deleteTankoubon(\'' + tankoubon.id + '\', \'' + escapeHtml(tankoubon.name) + '\')" style="background-color: #f44336; color: white;">';
         archivesHtml += '<i class="fa fa-trash"></i> Delete</button>';
         archivesHtml += '</div>';
 
