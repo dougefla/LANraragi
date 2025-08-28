@@ -416,6 +416,10 @@ sub sort_results ( $sortkey, $sortorder, @filtered ) {
         return @sorted;
     }
 
+    # Separate tankoubon IDs from regular archive IDs for different processing
+    my @archive_ids = grep { $_ !~ /^TANK/ } @filtered;
+    my @tank_ids = grep { $_ =~ /^TANK/ } @filtered;
+
     # Employ Lua scripting to fetch data in bulk, thereby minimizing network request frequency
     if ( $sortkey eq "lastread" ) {
         # Prepare a Lua script to retrieve the lastreadtime for all IDs
@@ -438,21 +442,28 @@ LUA
         };
         if ($@) {
             $logger->error("Failed to load Lua script: $@");
-            # Fallback to running individual hget operations for each ID
-            %tmpfilter = map { $_ => $redis->hget( $_, "lastreadtime" ) } @filtered;
+            # Fallback to running individual hget operations for each archive ID
+            %tmpfilter = map { $_ => $redis->hget( $_, "lastreadtime" ) } @archive_ids;
         } else {
-            my $result = $redis->evalsha($sha, 0, @filtered);
+            my $result = $redis->evalsha($sha, 0, @archive_ids);
             my $data = eval { decode_json($result) };
             if ($@) {
                 $logger->error("Failed to decode JSON from Lua script: $@");
                 # Revert to the original methodology
-                %tmpfilter = map { $_ => $redis->hget( $_, "lastreadtime" ) } @filtered;
+                %tmpfilter = map { $_ => $redis->hget( $_, "lastreadtime" ) } @archive_ids;
             } else {
                 # Convert the results into a hash table
                 foreach my $item (@$data) {
                     $tmpfilter{$item->[0]} = $item->[1];
                 }
             }
+        }
+        
+        # Handle tankoubon IDs separately - they need special processing
+        foreach my $tank_id (@tank_ids) {
+            # For tankoubons, we'll use a default lastreadtime of 0 
+            # or could implement tankoubon-specific lastread logic here
+            $tmpfilter{$tank_id} = 0;
         }
 
         # Sorting remains done in Perl -- Invert sort order for lastreadtime, biggest timestamps come first
@@ -484,15 +495,15 @@ LUA
             $logger->error("Failed to load Lua script: $@");
             # Revert to the original methodology
             my $re = qr/$sortkey/;
-            %tmpfilter = map { $_ => ( $redis->hget( $_, "tags" ) =~ m/.*${re}:(.*?)(\,.*|$)/ ) ? $1 : "zzzz" } @filtered;
+            %tmpfilter = map { $_ => ( $redis->hget( $_, "tags" ) =~ m/.*${re}:(.*?)(\,.*|$)/ ) ? $1 : "zzzz" } @archive_ids;
         } else {
-            my $result = $redis->evalsha($sha, 0, @filtered);
+            my $result = $redis->evalsha($sha, 0, @archive_ids);
             my $data = eval { decode_json($result) };
             if ($@) {
                 $logger->error("Failed to decode JSON from Lua script: $@");
                 # Revert to the original methodology
                 my $re = qr/$sortkey/;
-                %tmpfilter = map { $_ => ( $redis->hget( $_, "tags" ) =~ m/.*${re}:(.*?)(\,.*|$)/ ) ? $1 : "zzzz" } @filtered;
+                %tmpfilter = map { $_ => ( $redis->hget( $_, "tags" ) =~ m/.*${re}:(.*?)(\,.*|$)/ ) ? $1 : "zzzz" } @archive_ids;
             } else {
                 my $re = qr/$sortkey/;
                 foreach my $item (@$data) {
@@ -503,6 +514,13 @@ LUA
                     $tmpfilter{$id} = ($tags =~ m/.*${re}:(.*?)(\,.*|$)/) ? $1 : "zzzz";
                 }
             }
+        }
+        
+        # Handle tankoubon IDs separately for tag-based sorting
+        foreach my $tank_id (@tank_ids) {
+            # For tankoubons, we could get aggregated tags, but for simplicity, 
+            # we'll sort them at the end with "zzzz"
+            $tmpfilter{$tank_id} = "zzzz";
         }
 
         # Read comments from the bottom up for a better understanding of this sort algorithm.

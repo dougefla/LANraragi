@@ -182,41 +182,39 @@ sub get_archive_json_multi (@ids) {
 
     # Get the archive JSON for each ID.
     my @archives;
-    my @results;
-    eval {
-        $redis->multi;
-        foreach my $id (@ids) {
-            # Tanks can be mixed in with search results, and need to be handled differently than archive hashes.
-            if ($id =~ /^TANK/) {
-                # Just get the name -- We'll have to call the tank API afterwards to get full data anyway.
-                $redis->zrangebyscore( $id, 0, 0, qw{LIMIT 0 1} );
-            } else {
-                $redis->hgetall($id);
-            }
-        }
-        @results = $redis->exec;
-        $redis->quit;
-    };
-
-    # Build the archive JSONs.
-    for my $i ( 0 .. $#results ) {
-
-        # If we got no results for one ID/hgetall, skip it.
-        next unless ( $results[$i] );
-        my %hash = @{ $results[$i] };
-        my $id   = $ids[$i];
+    
+    # Process each ID individually to avoid multi-transaction issues with mixed data types
+    foreach my $id (@ids) {
         my $arcdata;
-
-        if ($id =~ /^TANK/) {
-            $arcdata = build_tank_json($id);
-        } else {
-            $arcdata = build_json( $id, %hash );
+        
+        eval {
+            if ($id =~ /^TANK/) {
+                # Handle tankoubon IDs
+                $arcdata = build_tank_json($id);
+            } else {
+                # Handle regular archive IDs
+                my %hash = $redis->hgetall($id);
+                # Skip if we got no data or corrupted data
+                if (%hash && (scalar(keys %hash) > 0)) {
+                    $arcdata = build_json( $id, %hash );
+                }
+            }
+        };
+        
+        if ($@ && $@ =~ /WRONGTYPE/) {
+            warn "Skipping ID $id due to Redis WRONGTYPE error - key may have incorrect data type";
+            next;
+        } elsif ($@) {
+            warn "Error processing ID $id: $@";
+            next;
         }
-
+        
         if ($arcdata) {
             push @archives, $arcdata;
         }
     }
+    
+    $redis->quit;
 
     return @archives;
 }
@@ -276,13 +274,13 @@ sub build_tank_json($id) {
     my $aggregate_size = 0;
 
     foreach my $archive_info (@{$tank{full_data}}) {
-        $aggregate_tags .= %$archive_info{tags} . ",";
-        $aggregate_names .= %$archive_info{title} . ",";
-        $aggregate_isnew = $aggregate_isnew || %$archive_info{isnew};
-        $aggregate_progress = $aggregate_progress + %$archive_info{progress};
-        $aggregate_pagecount = $aggregate_pagecount + %$archive_info{pagecount};
-        $aggregate_size = $aggregate_size + %$archive_info{size};
-        $latest_readtime = max($latest_readtime, %$archive_info{lastreadtime});
+        $aggregate_tags .= ($archive_info->{tags} || "") . ",";
+        $aggregate_names .= ($archive_info->{title} || "") . ",";
+        $aggregate_isnew = $aggregate_isnew || ($archive_info->{isnew} || "false");
+        $aggregate_progress = $aggregate_progress + (int($archive_info->{progress} || 0));
+        $aggregate_pagecount = $aggregate_pagecount + (int($archive_info->{pagecount} || 0));
+        $aggregate_size = $aggregate_size + (int($archive_info->{size} || 0));
+        $latest_readtime = max($latest_readtime, int($archive_info->{lastreadtime} || 0));
     }
 
     chop $aggregate_tags;
